@@ -26,8 +26,8 @@ class RAGPipeline:
         
         # Setup retriever
         self.retriever = self.vector_store.as_retriever(
-            search_type="similarity",
-            search_kwargs={"k": 5}
+            search_type="similarity_score_threshold",
+            search_kwargs={"k": 5, "score_threshold": 0.3}
         )
         
         # Define prompt template
@@ -38,10 +38,14 @@ Anda adalah asisten AI yang hanya menjawab berdasarkan informasi yang tersedia d
 
 ATURAN PENTING:
 1. Hanya gunakan informasi dari konteks yang diberikan di bawah ini
-2. Jika informasi tidak tersedia dalam konteks, jawab dengan: "Maaf, informasi tersebut tidak tersedia dalam data kami."
-3. Selalu sertakan URL sumber dalam jawaban Anda
+2. Jika informasi tersedia dalam konteks selalu sertakan URL sumber dalam jawaban Anda
+3. Jika informasi tidak tersedia dalam konteks, jawab dengan: "Maaf, informasi tersebut tidak tersedia dalam data kami." dan jangan menyertakan URL sumber
 4. Jangan menambahkan informasi dari pengetahuan umum atau spekulasi
 5. Jawab dalam bahasa Indonesia yang jelas dan informatif
+6. Jika ada URL sumber yang sama dan juga memiliki konteks isi yang sama, cukup tampilkan pilih satu URL tersebut
+7. Anda tidak harus selalu menampilkan semua URL sumber. tampilkan URL sumber yang relevan dengan jawaban anda
+8. Jangan mengulangi pertanyaan dalam jawaban Anda
+
 
 Konteks dari dokumen:
 {context}
