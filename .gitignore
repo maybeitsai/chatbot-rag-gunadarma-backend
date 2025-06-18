@@ -7,6 +7,7 @@
 .env
 .pyc
 \__pycache__
+\reports
 
 
 # Python
