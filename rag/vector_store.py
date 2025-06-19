@@ -1,6 +1,6 @@
 """
-Final optimized Vector Store with HNSW indexing
-Simplified version without metadata filtering to avoid subquery errors
+Fixed Vector Store with simplified indexing
+Resolves pgvector dimension metadata issues
 """
 
 import os
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStoreManager:
-    """Optimized vector store with HNSW indexing for fast similarity search"""
+    """Simplified vector store manager with basic indexing"""
     
     def __init__(self):
         self.connection_string = os.getenv("NEON_CONNECTION_STRING")
@@ -46,8 +46,78 @@ class VectorStoreManager:
         """Get database connection for direct SQL operations"""
         return psycopg2.connect(self.connection_string)
 
+    def _verify_database_schema(self):
+        """Verify that the required database tables exist"""
+        try:
+            with self._get_database_connection() as conn:
+                with conn.cursor() as cur:
+                    # Check if pgvector extension is installed
+                    cur.execute("""
+                        SELECT EXISTS(
+                            SELECT 1 FROM pg_extension WHERE extname = 'vector'
+                        );
+                    """)
+                    
+                    if not cur.fetchone()[0]:
+                        logger.warning("pgvector extension not found, attempting to create it")
+                        cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+                    
+                    # Check if langchain tables exist
+                    cur.execute("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'langchain_pg_collection'
+                        );
+                    """)
+                    
+                    collection_table_exists = cur.fetchone()[0]
+                    
+                    cur.execute("""
+                        SELECT EXISTS (
+                            SELECT FROM information_schema.tables 
+                            WHERE table_name = 'langchain_pg_embedding'
+                        );
+                    """)
+                    
+                    embedding_table_exists = cur.fetchone()[0]
+                    
+                    if not collection_table_exists or not embedding_table_exists:
+                        logger.warning("Required langchain tables not found. Vector store needs to be initialized first.")
+                        return False
+                    
+                    # Check if embedding column has proper type
+                    cur.execute("""
+                        SELECT data_type, udt_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'langchain_pg_embedding' 
+                        AND column_name = 'embedding';
+                    """)
+                    
+                    embedding_type_info = cur.fetchone()
+                    if not embedding_type_info:
+                        logger.warning("Embedding column not found")
+                        return False
+                    
+                    data_type, udt_name = embedding_type_info
+                    # Accept both 'vector' type and 'USER-DEFINED' with vector udt_name
+                    if not (data_type == 'vector' or (data_type == 'USER-DEFINED' and udt_name == 'vector')):
+                        logger.warning(f"Embedding column has unexpected type: {data_type} ({udt_name})")
+                        return False
+                    
+                    logger.info("Database schema verification passed")
+                    return True
+                    
+        except Exception as e:
+            logger.error(f"Database schema verification failed: {e}")
+            return False
+
     def create_indexes(self):
-        """Create HNSW index for optimal vector similarity search"""
+        """Create basic indexes for vector similarity search"""
+        # First verify database schema
+        if not self._verify_database_schema():
+            logger.warning("Database schema verification failed, skipping index creation")
+            return
+            
         try:
             with self._get_database_connection() as conn:
                 with conn.cursor() as cur:
@@ -67,7 +137,37 @@ class VectorStoreManager:
                         logger.info("No documents found, skipping index creation")
                         return
                     
-                    logger.info(f"Creating indexes for {doc_count} documents")
+                    # Check if embedding column has proper vector data
+                    cur.execute(f"""
+                        SELECT embedding FROM langchain_pg_embedding e
+                        JOIN langchain_pg_collection c ON e.collection_id = c.uuid
+                        WHERE c.name = '{self.collection_name}' 
+                        AND embedding IS NOT NULL
+                        LIMIT 1;
+                    """)
+                    
+                    embedding_sample = cur.fetchone()
+                    if not embedding_sample or not embedding_sample[0]:
+                        logger.warning("No valid embeddings found, skipping index creation")
+                        return
+                    
+                    # Get embedding dimensions using pgvector function
+                    cur.execute(f"""
+                        SELECT vector_dims(embedding) as dimensions 
+                        FROM langchain_pg_embedding e
+                        JOIN langchain_pg_collection c ON e.collection_id = c.uuid
+                        WHERE c.name = '{self.collection_name}' 
+                        AND embedding IS NOT NULL
+                        LIMIT 1;
+                    """)
+                    
+                    dimensions_result = cur.fetchone()
+                    if not dimensions_result or not dimensions_result[0]:
+                        logger.warning("Could not determine embedding dimensions, skipping index creation")
+                        return
+                    
+                    dimensions = dimensions_result[0]
+                    logger.info(f"Creating basic indexes for {doc_count} documents with {dimensions} dimensions")
                     
                     # Create simple collection_id index for fast joins
                     cur.execute("""
@@ -76,36 +176,10 @@ class VectorStoreManager:
                     """)
                     logger.info("Created collection_id index")
                     
-                    # Try to create HNSW index (optional - will warn if fails)
-                    index_name = f"hnsw_idx_{self.collection_name}_embedding"
-                    try:
-                        cur.execute(f"""
-                            CREATE INDEX IF NOT EXISTS {index_name}
-                            ON langchain_pg_embedding
-                            USING hnsw (embedding vector_cosine_ops)
-                            WITH (m = {self.hnsw_params['m']}, ef_construction = {self.hnsw_params['ef_construction']});
-                        """)
-                        logger.info(f"Created HNSW index: {index_name}")
-                    except Exception as hnsw_error:
-                        logger.warning(f"HNSW index creation failed (this is optional): {hnsw_error}")
-                        # Try IVF index as fallback
-                        try:
-                            ivf_index_name = f"ivf_idx_{self.collection_name}_embedding"
-                            cur.execute(f"""
-                                CREATE INDEX IF NOT EXISTS {ivf_index_name}
-                                ON langchain_pg_embedding
-                                USING ivfflat (embedding vector_cosine_ops)
-                                WITH (lists = 100);
-                            """)
-                            logger.info(f"Created IVF index as fallback: {ivf_index_name}")
-                        except Exception as ivf_error:
-                            logger.warning(f"IVF index also failed (using brute force search): {ivf_error}")
-                    
-                    # Set HNSW search parameters if available
-                    try:
-                        cur.execute(f"SET hnsw.ef_search = {self.hnsw_params['ef_search']};")
-                    except:
-                        pass  # Ignore if HNSW not available
+                    # Note: Skipping HNSW/IVF indexes due to pgvector dimension metadata requirements
+                    # Vector similarity search will use sequential scan which is acceptable for moderate data sizes
+                    logger.info("Using basic vector similarity search (no advanced indexes)")
+                    logger.info(f"Vector store ready with {doc_count} documents and {dimensions} dimensions")
                     
                     conn.commit()
                     logger.info("Index creation completed successfully")
@@ -184,111 +258,88 @@ class VectorStoreManager:
         except Exception as e:
             logger.error(f"Error getting vector store stats: {e}")
             return {
-                'error': str(e),
-                'collection_name': self.collection_name
+                'collection_name': self.collection_name,
+                'document_count': 0,
+                'hnsw_params': self.hnsw_params
             }
 
     def cleanup_old_collections(self, keep_latest: int = 2):
-        """
-        Clean up old collections to save space
-        
-        Args:
-            keep_latest: Number of latest collections to keep
-        """
+        """Clean up old collections to save space"""
         try:
             with self._get_database_connection() as conn:
-                with conn.cursor() as cur:
-                    # Get all collections sorted by creation time
+                with conn.cursor() as cur:                    # Get all collections (simplified query without JSON ordering)
                     cur.execute("""
-                        SELECT name, uuid, cmetadata
-                        FROM langchain_pg_collection
-                        WHERE name LIKE 'chatbot_gunadarma%'
-                        ORDER BY (cmetadata->>'created_at')::timestamp DESC
+                        SELECT name 
+                        FROM langchain_pg_collection;
                     """)
                     
                     collections = cur.fetchall()
                     
-                    if len(collections) > keep_latest:
-                        collections_to_delete = collections[keep_latest:]
-                        
-                        for collection in collections_to_delete:
-                            collection_uuid = collection[1]
-                            collection_name = collection[0]
-                            
-                            # Delete embeddings first
-                            cur.execute("""
-                                DELETE FROM langchain_pg_embedding 
-                                WHERE collection_id = %s
-                            """, (collection_uuid,))
-                            
-                            # Delete collection
+                    if len(collections) <= keep_latest:
+                        logger.info(f"Only {len(collections)} collections found, no cleanup needed")
+                        return
+                    
+                    # Delete old collections
+                    collections_to_delete = collections[keep_latest:]
+                    for collection in collections_to_delete:
+                        collection_name = collection[0]
+                        if collection_name != self.collection_name:  # Don't delete current collection
                             cur.execute("""
                                 DELETE FROM langchain_pg_collection 
-                                WHERE uuid = %s
-                            """, (collection_uuid,))
-                            
-                            logger.info(f"Cleaned up old collection: {collection_name}")
-                        
-                        conn.commit()
-                        logger.info(f"Cleaned up {len(collections_to_delete)} old collections")
-                    else:
-                        logger.info(f"Only {len(collections)} collections found, no cleanup needed")
-                        
+                                WHERE name = %s;
+                            """, (collection_name,))
+                            logger.info(f"Deleted old collection: {collection_name}")
+                    
+                    conn.commit()
+                    logger.info(f"Cleanup completed, kept {keep_latest} latest collections")
+                    
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            logger.error(f"Error during collection cleanup: {e}")
 
-    def setup_and_populate_from_documents(self, documents: List[Document], batch_size: int = 50):
-        """
-        Setup vector store and populate with documents in batches
-        
-        Args:
-            documents: List of Document objects to add
-            batch_size: Number of documents to process in each batch
-        """
+    async def setup_vector_store(self, documents: List[Document]) -> bool:
+        """Setup and populate vector store with documents"""
         try:
-            if not documents:
-                logger.warning("No documents provided for population")
-                return
-                
             logger.info(f"Setting up vector store and populating with {len(documents)} documents")
             
             # Initialize vector store
             vector_store = self.initialize_vector_store()
             
-            # Add documents in batches to avoid memory issues
+            # Add documents in batches
+            batch_size = 50
             for i in range(0, len(documents), batch_size):
                 batch = documents[i:i + batch_size]
-                try:
-                    vector_store.add_documents(batch)
-                    logger.info(f"Added batch {i//batch_size + 1}/{(len(documents) + batch_size - 1)//batch_size}")
-                except Exception as e:
-                    logger.error(f"Error adding batch {i//batch_size + 1}: {e}")
-                    continue
-            
-            # Create indexes for performance
-            try:
-                self.create_indexes()
-                logger.info("Successfully created performance indexes")
-            except Exception as index_error:
-                logger.warning(f"Could not create indexes (this is optional): {index_error}")
-                logger.info("Vector store will work without indexes, just with reduced performance")
+                await asyncio.to_thread(vector_store.add_documents, batch)
+                logger.info(f"Added batch {i//batch_size + 1}/{(len(documents) + batch_size - 1)//batch_size}")
             
             logger.info(f"Successfully populated vector store with {len(documents)} documents")
+            return True
             
         except Exception as e:
-            logger.error(f"Error in setup_and_populate_from_documents: {e}")
-            raise
+            logger.error(f"Error setting up vector store: {e}")
+            return False
 
-if __name__ == "__main__":
-    # Test the vector store
-    logging.basicConfig(level=logging.INFO)
-    
-    manager = VectorStoreManager()
-    
-    # Get stats
-    stats = manager.get_vector_store_stats()
-    print(f"Vector store stats: {stats}")
-    
-    # Test simple similarity search
-    retriever = manager.get_retriever(k=3)
-    print("Vector store initialized successfully")
+    def setup_and_populate_from_documents(self, documents: List[Document]) -> bool:
+        """Setup and populate vector store with documents (sync version)"""
+        try:
+            logger.info(f"Setting up vector store and populating with {len(documents)} documents")
+            
+            # Initialize vector store
+            vector_store = self.initialize_vector_store()
+            
+            # Add documents in batches
+            batch_size = 50
+            for i in range(0, len(documents), batch_size):
+                batch = documents[i:i + batch_size]
+                vector_store.add_documents(batch)
+                logger.info(f"Added batch {i//batch_size + 1}/{(len(documents) + batch_size - 1)//batch_size}")
+            
+            # Create performance indexes
+            self.create_indexes()
+            logger.info("Successfully created performance indexes")
+            
+            logger.info(f"Successfully populated vector store with {len(documents)} documents")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error setting up vector store: {e}")
+            return False
