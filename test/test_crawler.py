@@ -17,12 +17,12 @@ import time
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from crawl.crawler import (
-    OptimizedCrawler, 
+    WebCrawler, 
     CrawlConfig, 
-    AdvancedCacheManager,
-    SmartUrlFilter,
+    CacheManager,
+    UrlFilter,
     RobotsChecker,
-    EnhancedContentManager,
+    ContentManager,
     PageData
 )
 
@@ -40,7 +40,7 @@ class TestCrawlConfig:
         assert config.enable_url_cache is True
         assert config.enable_content_cache is True
         assert config.enable_smart_filtering is True
-        assert config.cache_ttl == 3600
+        assert config.cache_ttl == 60 * 60 * 24  * 30
         assert config.max_cache_size == 1000
     
     def test_custom_config(self):
@@ -58,14 +58,14 @@ class TestCrawlConfig:
         assert config.cache_ttl == 7200
 
 
-class TestAdvancedCacheManager:
-    """Test AdvancedCacheManager functionality"""
+class TestCacheManager:
+    """Test CacheManager functionality"""
     
     def setup_method(self):
         """Setup test environment"""
         self.temp_dir = tempfile.mkdtemp()
         self.config = CrawlConfig(database_path=f"{self.temp_dir}/test_cache.db")
-        self.cache_manager = AdvancedCacheManager(self.config)
+        self.cache_manager = CacheManager(self.config)
     
     def teardown_method(self):
         """Cleanup test environment"""
@@ -141,13 +141,13 @@ class TestAdvancedCacheManager:
         assert is_cached is True
 
 
-class TestSmartUrlFilter:
-    """Test SmartUrlFilter functionality"""
+class TestUrlFilter:
+    """Test UrlFilter functionality"""
     
     def setup_method(self):
         """Setup test environment"""
         self.config = CrawlConfig()
-        self.url_filter = SmartUrlFilter(self.config)
+        self.url_filter = UrlFilter(self.config)
     
     def test_duplicate_pattern_filtering(self):
         """Test filtering of duplicate URL patterns"""
@@ -210,14 +210,14 @@ class TestSmartUrlFilter:
         assert "domain_limit_exceeded" in reason
 
 
-class TestEnhancedContentManager:
-    """Test EnhancedContentManager functionality"""
+class TestContentManager:
+    """Test ContentManager functionality"""
     
     def setup_method(self):
         """Setup test environment"""
         self.temp_dir = tempfile.mkdtemp()
         self.config = CrawlConfig()
-        self.content_manager = EnhancedContentManager(
+        self.content_manager = ContentManager(
             data_dir=self.temp_dir, 
             config=self.config
         )
@@ -293,18 +293,18 @@ class TestEnhancedContentManager:
         assert saved_data[1]["url"] == "https://example.com/test2"
 
 
-class TestOptimizedCrawler:
-    """Test OptimizedCrawler integration"""
+class TestWebCrawler:
+    """Test WebCrawler integration"""
     
     def setup_method(self):
         """Setup test environment"""
         self.config = CrawlConfig(
             max_depth=1,
-            request_delay=0.1,  # Fast testing
+            request_delay=0.1,
             timeout=10
         )
-        self.target_urls = ["https://httpbin.org/html"]  # Reliable test URL
-        self.crawler = OptimizedCrawler(self.target_urls, self.config)
+        self.target_urls = ["https://httpbin.org/html"]
+        self.crawler = WebCrawler(self.target_urls, self.config)
     
     def test_crawler_initialization(self):
         """Test crawler initialization"""
@@ -395,7 +395,7 @@ def test_page_data_serialization():
 async def test_robots_checker():
     """Test RobotsChecker functionality"""
     config = CrawlConfig()
-    cache_manager = AdvancedCacheManager(config)
+    cache_manager = CacheManager(config)
     robots_checker = RobotsChecker(cache_manager)
     
     try:

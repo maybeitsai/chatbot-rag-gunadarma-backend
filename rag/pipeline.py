@@ -114,18 +114,19 @@ Jawaban:
         except Exception as e:
             logger.warning(f"Could not get question embedding: {e}")
             return None
-    
     def _setup_retriever(self, metadata_filter: Optional[Dict[str, Any]] = None) -> Any:
-        """Setup optimized retriever with optional metadata filtering"""
+        """Setup optimized retriever - metadata filtering removed for performance"""
         
-        # Dynamic retrieval parameters based on query type
+        # Dynamic retrieval parameters optimized for similarity search
         search_kwargs = {
             "k": 8,  # Increased for better context
             "score_threshold": 0.25  # Slightly lower threshold for more results
         }
         
+        # Note: metadata filtering removed as it's not supported in optimized vector store
+        # The optimized version focuses on pure similarity search for better performance
         if metadata_filter:
-            search_kwargs["filter"] = metadata_filter
+            logger.warning("Metadata filtering not supported in optimized vector store, using similarity search only")
         
         return self.vector_store.as_retriever(
             search_type="similarity_score_threshold",
@@ -212,7 +213,6 @@ Jawaban:
                 "status": "error",
                 "source_count": 0
             }
-    
     async def ask_question_async(self, 
                                question: str, 
                                metadata_filter: Optional[Dict[str, Any]] = None,
@@ -222,7 +222,7 @@ Jawaban:
         
         Args:
             question: User question
-            metadata_filter: Optional metadata filter for retrieval
+            metadata_filter: Not used in optimized version (kept for API compatibility)
             use_cache: Whether to use semantic caching
             
         Returns:
@@ -411,11 +411,58 @@ Jawaban:
             self.thread_pool.shutdown(wait=True)
         
         logger.info("RAG Pipeline cleanup completed")
+    
+    def optimize_vector_store(self) -> bool:
+        """Optimize vector store performance by creating indexes"""
+        try:
+            logger.info("Optimizing vector store performance...")
+            self.vector_store_manager.create_indexes()
+            logger.info("Vector store optimization completed successfully")
+            return True
+        except Exception as e:
+            logger.warning(f"Vector store optimization failed (non-critical): {e}")
+            return False
+
+    def get_vector_store_info(self) -> Dict[str, Any]:
+        """Get information about the optimized vector store"""
+        try:
+            stats = self.vector_store_manager.get_vector_store_stats()
+            return {
+                "status": "optimized",
+                "collection_name": stats.get("collection_name"),
+                "document_count": stats.get("document_count", 0),
+                "hnsw_params": stats.get("hnsw_params", {}),
+                "features": [
+                    "HNSW indexing for fast similarity search",
+                    "Optimized retrieval without metadata filtering",
+                    "Enhanced performance for large document collections"
+                ]
+            }
+        except Exception as e:
+            logger.error(f"Error getting vector store info: {e}")
+            return {
+                "status": "error",
+                "error": str(e)
+            }
 
 
 # Factory function
 def create_rag_pipeline(enable_cache: bool = True) -> RAGPipeline:
-    """Factory function to create optimized RAG pipeline"""
+    """
+    Factory function to create optimized RAG pipeline
+    
+    Features of the optimized pipeline:
+    - Uses optimized vector store without metadata filtering for better performance
+    - HNSW indexing for fast similarity search
+    - Semantic caching for improved response times
+    - Async processing capabilities
+    
+    Args:
+        enable_cache: Whether to enable semantic caching
+        
+    Returns:
+        Optimized RAG pipeline instance
+    """
     return RAGPipeline(enable_cache=enable_cache)
 
 
@@ -453,6 +500,18 @@ if __name__ == "__main__":
             batch_results = await rag.batch_questions(test_questions)
             for i, result in enumerate(batch_results):
                 print(f"{i+1}. Status: {result['status']}, Time: {result['response_time']}s, Cached: {result['cached']}")
+            
+            # Test optimized vector store
+            vector_info = rag.get_vector_store_info()
+            print(f"✓ Vector Store Status: {vector_info['status']}")
+            print(f"  Documents: {vector_info.get('document_count', 0)}")
+            print(f"  Features: {', '.join(vector_info.get('features', []))}")
+            
+            # Test vector store optimization
+            if rag.optimize_vector_store():
+                print("✓ Vector store optimization successful")
+            else:
+                print("⚠ Vector store optimization had issues (non-critical)")
             
             # Show stats
             print("\n--- Performance Statistics ---")

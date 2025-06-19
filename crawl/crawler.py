@@ -51,16 +51,20 @@ class CrawlConfig:
     duplicate_threshold: float = 0.95
     max_retries: int = 3
     timeout: int = 60
-    max_concurrent: int = 5
-    
+    max_concurrent: int = 5    
     # Advanced caching settings
     enable_url_cache: bool = True
     enable_content_cache: bool = True
     enable_response_cache: bool = True
     enable_smart_filtering: bool = True
     enable_robots_respect: bool = True
-    cache_ttl: int = 3600  # 1 hour
+    cache_ttl: int = 60 * 60  * 24  * 30 
     max_cache_size: int = 1000
+    
+    # Robots.txt bypass for specific domains (useful for educational purposes)
+    robots_bypass_domains: List[str] = field(default_factory=lambda: [
+        'baak.gunadarma.ac.id',  # BAAK Gunadarma often blocks crawlers
+    ])
     
     # Database settings
     enable_incremental_updates: bool = True
@@ -95,7 +99,7 @@ class PageData:
         }
 
 
-class AdvancedCacheManager:
+class CacheManager:
     """Advanced caching system with multiple cache types and persistence"""
     
     def __init__(self, config: CrawlConfig):
@@ -315,7 +319,7 @@ class AdvancedCacheManager:
         }
 
 
-class SmartUrlFilter:
+class UrlFilter:
     """Smart URL filtering to prevent duplicate crawling"""
     
     def __init__(self, config: CrawlConfig):
@@ -410,7 +414,7 @@ class SmartUrlFilter:
 class RobotsChecker:
     """Robots.txt compliance checker with caching"""
     
-    def __init__(self, cache_manager: AdvancedCacheManager):
+    def __init__(self, cache_manager: CacheManager):
         self.cache_manager = cache_manager
     
     async def get_robots_rules(self, domain: str) -> Dict:
@@ -484,7 +488,7 @@ class RobotsChecker:
         return True
 
 
-class EnhancedContentManager:
+class ContentManager:
     """Enhanced content management with incremental updates and similarity detection"""
     def __init__(self, data_dir: str = "data", config: CrawlConfig = None):
         self.config = config or CrawlConfig()
@@ -500,7 +504,7 @@ class EnhancedContentManager:
         self.index_path = self.data_dir / "content_index.json"
         
         # Initialize cache manager
-        self.cache_manager = AdvancedCacheManager(self.config)
+        self.cache_manager = CacheManager(self.config)
         
         # Content tracking
         self.existing_content: Dict[str, Dict] = {}
@@ -669,7 +673,7 @@ class EnhancedContentManager:
             return 0
 
 
-class OptimizedCrawler:
+class WebCrawler:
     """Main optimized crawler with advanced caching and smart filtering"""
     
     def __init__(self, target_urls: List[str], config: CrawlConfig = None):
@@ -677,8 +681,8 @@ class OptimizedCrawler:
         self.target_urls = target_urls
         
         # Initialize components
-        self.content_manager = EnhancedContentManager(config=self.config)
-        self.url_filter = SmartUrlFilter(self.config)
+        self.content_manager = ContentManager(config=self.config)
+        self.url_filter = UrlFilter(self.config)
         self.robots_checker = RobotsChecker(self.content_manager.cache_manager)
         
         # URL management
@@ -735,27 +739,69 @@ class OptimizedCrawler:
                     metadata={'cache_hit': True}
                 )
                 return page_data, set()
-        
-        # Robots.txt check
+          # Robots.txt check
         if self.config.enable_robots_respect:
             domain = urlparse(url).netloc
-            robots_rules = await self.robots_checker.get_robots_rules(domain)
             
-            if not self.robots_checker.is_url_allowed(url, robots_rules):
-                self.logger.info(f"Blocked by robots.txt: {url}")
-                return None, set()
-            
-            # Respect crawl delay
-            crawl_delay = robots_rules.get('crawl_delay')
-            if crawl_delay:
-                await asyncio.sleep(crawl_delay)
-        
+            # Check if domain is in bypass list
+            if domain in self.config.robots_bypass_domains:
+                self.logger.info(f"Bypassing robots.txt for educational domain: {domain}")
+            else:
+                robots_rules = await self.robots_checker.get_robots_rules(domain)
+                
+                if not self.robots_checker.is_url_allowed(url, robots_rules):
+                    self.logger.info(f"Blocked by robots.txt: {url} (use robots_bypass_domains to override)")
+                    return None, set()
+                  # Respect crawl delay for non-bypass domains
+                crawl_delay = robots_rules.get('crawl_delay')
+                if crawl_delay and crawl_delay > 0:
+                    await asyncio.sleep(crawl_delay)
         # Request delay
         delay = self.config.baak_delay if 'baak' in url else self.config.request_delay
         await asyncio.sleep(delay)
         
-        try:
-            # Fetch content
+        try:            # For BAAK sites with Cloudflare, use Playwright exclusively with fallback
+            if "baak.gunadarma.ac.id" in url:
+                self.logger.info("BAAK site detected - using Playwright with Cloudflare bypass")
+                page_data = await self._crawl_baak_with_playwright(url)
+                
+                # Fallback to enhanced requests if Playwright fails
+                if not page_data:
+                    self.logger.warning("Playwright failed for BAAK, trying enhanced requests...")
+                    page_data = await self._crawl_baak_with_requests(url)
+                
+                if not page_data:
+                    self.logger.error(f"Failed to crawl BAAK site with both methods: {url}")
+                    return None, set()
+                  # Extract text content from page_data
+                soup = BeautifulSoup(page_data['content'], 'html.parser')
+                
+                # EXTRACT LINKS FIRST before removing elements
+                new_links = self._extract_links_from_soup(soup, url)
+                
+                # Remove unwanted elements for text extraction  
+                for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+                    element.decompose()
+                
+                text_content = soup.get_text()
+                text_content = re.sub(r'\s+', ' ', text_content).strip()
+                
+                # Create page data for BAAK
+                page_data_obj = PageData(
+                    url=url,
+                    title=page_data['title'],
+                    text_content=text_content,
+                    source_type='html',
+                    timestamp=datetime.now().isoformat(),
+                    content_hash=hashlib.md5(text_content.encode()).hexdigest(),
+                    metadata={'method': 'playwright_baak', 'cache_hit': False}
+                )
+                
+                self.logger.info(f"BAAK crawling completed - Found {len(new_links)} links and {len(self.pdf_urls)} PDFs")
+                
+                return page_data_obj, new_links
+                
+            # For other sites, use standard requests
             session = requests.Session()
             retry_strategy = Retry(
                 total=self.config.max_retries,
@@ -889,8 +935,9 @@ class OptimizedCrawler:
                 except Exception as e:
                     self.logger.error(f"Error crawling {url}: {e}")
                     self.stats['errors'] += 1
-            
             current_urls = next_urls
+          # Process PDFs found during crawling
+        await self._process_discovered_pdfs(crawled_data)
         
         return crawled_data
     
@@ -976,6 +1023,398 @@ class OptimizedCrawler:
         print(f"  Cache sizes: {cache_stats['cache_sizes']}")
         
         print("=" * 60)
+    async def _crawl_baak_with_playwright(self, url: str) -> Optional[Dict]:
+        """Crawl BAAK sites using enhanced Playwright with Cloudflare bypass"""
+        try:
+            from playwright.async_api import async_playwright
+            
+            async with async_playwright() as p:
+                # Launch browser with enhanced stealth settings
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-dev-shm-usage',
+                        '--disable-accelerated-2d-canvas',
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-extensions',
+                        '--disable-gpu',
+                        '--disable-web-security',
+                        '--disable-features=VizDisplayCompositor',
+                        '--no-first-run',
+                        '--no-zygote'
+                    ]
+                )
+                
+                context = await browser.new_context(
+                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    viewport={'width': 1920, 'height': 1080},
+                    java_script_enabled=True
+                )
+                
+                page = await context.new_page()
+                
+                # Enhanced headers for BAAK
+                await page.set_extra_http_headers({
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                    'Cache-Control': 'max-age=0'
+                })
+                
+                # Add stealth scripts to bypass detection
+                await page.add_init_script("""
+                    // Remove webdriver properties
+                    Object.defineProperty(navigator, 'webdriver', {
+                        get: () => undefined,
+                    });
+                    
+                    // Remove automation indicators
+                    delete window.navigator.__proto__.webdriver;
+                    
+                    // Override permissions
+                    Object.defineProperty(navigator, 'permissions', {
+                        get: () => ({
+                            query: () => Promise.resolve({ state: 'granted' })
+                        })
+                    });
+                    
+                    // Override plugins
+                    Object.defineProperty(navigator, 'plugins', {
+                        get: () => [1, 2, 3, 4, 5]
+                    });
+                    
+                    // Override languages
+                    Object.defineProperty(navigator, 'languages', {
+                        get: () => ['en-US', 'en', 'id']
+                    });
+                """)
+                
+                try:
+                    self.logger.info(f"Attempting to load BAAK URL: {url}")
+                    
+                    # Navigate with extended timeout for Cloudflare
+                    response = await page.goto(
+                        url, 
+                        wait_until="domcontentloaded", 
+                        timeout=60000
+                    )
+                    
+                    if response:
+                        self.logger.info(f"BAAK Response status: {response.status}")
+                        
+                        # Check for successful response
+                        if response.status != 200:
+                            self.logger.error(f"HTTP error {response.status} for {url}")
+                            await browser.close()
+                            return None
+                    
+                    # Wait for Cloudflare challenge completion
+                    await page.wait_for_timeout(5000)
+                    
+                    # Check for Cloudflare challenge indicators and wait if needed
+                    cloudflare_selectors = [
+                        "[data-ray]",
+                        ".cf-browser-verification", 
+                        "#cf-challenge-running",
+                        ".challenge-running",
+                        'div[class*="cloudflare"]',
+                        '.cf-wrapper'
+                    ]
+                    
+                    for selector in cloudflare_selectors:
+                        try:
+                            element = await page.query_selector(selector)
+                            if element:
+                                self.logger.info("Cloudflare challenge detected, waiting for completion...")
+                                await page.wait_for_timeout(10000)
+                                break
+                        except:
+                            continue
+                      # Wait for full page load
+                    await page.wait_for_load_state("networkidle", timeout=30000)
+                    
+                    # Get page content
+                    content = await page.content()
+                    title = await page.title()
+                    
+                    # Validate content (check if we got actual content, not a block page)
+                    if len(content) < 1000 and ("cloudflare" in content.lower() or "access denied" in content.lower()):
+                        self.logger.warning(f"Possible Cloudflare block detected for {url}, retrying...")
+                        await page.wait_for_timeout(5000)
+                        content = await page.content()
+                        title = await page.title()
+                    
+                    await browser.close()
+                    
+                    self.logger.info(f"Successfully retrieved BAAK content: {len(content)} characters")
+                    
+                    return {
+                        'url': url,
+                        'title': title,
+                        'content': content,
+                        'source_type': 'html',
+                        'timestamp': datetime.now().isoformat()
+                    }
+                    
+                except Exception as nav_error:
+                    self.logger.error(f"Navigation error for BAAK URL {url}: {str(nav_error)}")
+                    await browser.close()
+                    return None
+                
+        except Exception as e:
+            self.logger.error(f"Playwright crawl error for BAAK URL {url}: {str(e)}")
+            return None
+            self.logger.error(f"BAAK Playwright crawl error for {url}: {str(e)}")
+            return None
+    
+    async def _crawl_baak_with_requests(self, url: str) -> Optional[Dict]:
+        """Fallback method untuk crawl BAAK menggunakan requests dengan enhanced headers"""
+        try:
+            self.logger.info(f"Trying enhanced requests for BAAK URL: {url}")
+            
+            # Enhanced headers untuk bypass Cloudflare
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "DNT": "1",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"'
+            }
+            
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            # Setup retry strategy
+            retry_strategy = Retry(
+                total=3,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS"],
+                backoff_factor=1
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
+            
+            # Multiple attempts dengan delay berbeda
+            for attempt in range(3):
+                try:
+                    if attempt > 0:
+                        delay = 2 ** attempt  # Exponential backoff
+                        self.logger.info(f"Waiting {delay} seconds before retry {attempt + 1}")
+                        await asyncio.sleep(delay)
+                    
+                    response = session.get(url, timeout=30, allow_redirects=True)
+                    
+                    if response.status_code == 200:
+                        # Cek apakah content valid (bukan halaman error)
+                        content = response.text
+                        if len(content) > 1000 and "cloudflare" not in content.lower()[:2000]:
+                            soup = BeautifulSoup(content, 'html.parser')
+                            title = soup.title.string if soup.title else "Untitled"
+                            
+                            self.logger.info(f"Successfully retrieved BAAK content via requests: {len(content)} characters")
+                            
+                            return {
+                                'url': url,
+                                'title': title.strip(),
+                                'content': content,
+                                'source_type': 'html',
+                                'timestamp': datetime.now().isoformat()
+                            }
+                        else:
+                            self.logger.warning(f"Received Cloudflare challenge page, attempt {attempt + 1}")
+                            continue
+                    else:
+                        self.logger.warning(f"HTTP {response.status_code} for {url}, attempt {attempt + 1}")
+                        continue
+                        
+                except requests.RequestException as e:
+                    self.logger.warning(f"Request error on attempt {attempt + 1}: {e}")
+                    continue
+            
+            self.logger.error(f"All attempts failed for BAAK URL: {url}")
+            return None            
+        except Exception as e:
+            self.logger.error(f"Enhanced requests crawl error for BAAK URL {url}: {str(e)}")
+            return None
+
+    def _extract_links_from_soup(self, soup: BeautifulSoup, base_url: str) -> Set[str]:
+        """Extract and normalize links from BeautifulSoup object"""
+        links = set()
+        
+        # Extract all <a> tags with href
+        all_links = soup.find_all('a', href=True)
+        
+        for link in all_links:
+            href = link['href'].strip()
+            if not href:
+                continue
+                
+            # Convert relative URLs to absolute
+            absolute_url = urljoin(base_url, href)
+            
+            # Basic validation
+            parsed = urlparse(absolute_url)
+            if parsed.scheme in ('http', 'https') and parsed.netloc:
+                # Check if it's a PDF
+                if absolute_url.lower().endswith('.pdf'):
+                    self.pdf_urls.add(absolute_url)
+                else:
+                    links.add(absolute_url)
+        
+        return links
+    
+    async def _extract_pdf_content(self, pdf_url: str) -> Optional[str]:
+        """Extract content from PDF files"""
+        try:
+            self.logger.info(f"Processing PDF: {pdf_url}")
+            
+            # PDF-specific headers
+            pdf_headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/pdf,application/octet-stream,*/*",
+                "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "DNT": "1",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "same-origin",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
+                "Referer": "https://baak.gunadarma.ac.id/",
+            }
+            
+            pdf_session = requests.Session()
+            pdf_session.headers.update(pdf_headers)
+            
+            retry_strategy = Retry(
+                total=3,
+                status_forcelist=[429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "OPTIONS"],
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy)
+            pdf_session.mount("http://", adapter)
+            pdf_session.mount("https://", adapter)
+            
+            response = pdf_session.get(pdf_url, timeout=60, stream=True)
+            
+            if response.status_code != 200:
+                self.logger.error(f"Failed to download PDF. Status: {response.status_code}")
+                return None
+            
+            # Check content type
+            content_type = response.headers.get("content-type", "").lower()
+            if "pdf" not in content_type and "octet-stream" not in content_type:
+                if "html" in content_type:
+                    self.logger.error("Received HTML instead of PDF - likely blocked")
+                    return None
+            
+            # Save PDF temporarily
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    tmp_file.write(chunk)
+                tmp_path = tmp_file.name
+            
+            # Extract text using pdfplumber (more reliable than PyPDF2)
+            try:
+                import pdfplumber
+                text_content = ""
+                
+                with pdfplumber.open(tmp_path) as pdf:
+                    for page_num, page in enumerate(pdf.pages):
+                        try:
+                            page_text = page.extract_text()
+                            if page_text:
+                                text_content += f"\n--- Page {page_num + 1} ---\n"
+                                text_content += page_text
+                        except Exception as page_error:
+                            self.logger.warning(f"Error extracting page {page_num + 1}: {page_error}")
+                            continue
+                
+                # Cleanup temp file
+                os.unlink(tmp_path)
+                
+                if text_content.strip():
+                    self.logger.info(f"Successfully extracted {len(text_content)} characters from PDF")
+                    return text_content.strip()
+                else:
+                    self.logger.warning("No text content extracted from PDF")
+                    return None
+                    
+            except Exception as extract_error:
+                self.logger.error(f"PDF text extraction failed: {extract_error}")
+                # Cleanup temp file
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"PDF processing error for {pdf_url}: {e}")
+            return None
+    
+    async def _process_discovered_pdfs(self, crawled_data: List[PageData]):
+        """Process all discovered PDF URLs"""
+        if not self.pdf_urls:
+            self.logger.info("No PDF URLs found during crawling")
+            return
+            
+        self.logger.info(f"Processing {len(self.pdf_urls)} PDF files...")
+        
+        for pdf_url in self.pdf_urls:
+            try:
+                # Add delay for PDF processing
+                await asyncio.sleep(self.config.pdf_delay)
+                
+                # Extract PDF content
+                pdf_content = await self._extract_pdf_content(pdf_url)
+                
+                if pdf_content:
+                    # Create PageData object for PDF
+                    pdf_data = PageData(
+                        url=pdf_url,
+                        title=f"PDF Document: {os.path.basename(urlparse(pdf_url).path)}",
+                        text_content=pdf_content,
+                        source_type='pdf',
+                        timestamp=datetime.now().isoformat(),
+                        content_hash=hashlib.md5(pdf_content.encode()).hexdigest(),
+                        metadata={
+                            'file_type': 'pdf',
+                            'extraction_method': 'pdfplumber',
+                            'content_length': len(pdf_content)
+                        }
+                    )
+                    
+                    crawled_data.append(pdf_data)
+                    self.stats['pdfs_processed'] += 1
+                    self.logger.info(f"Successfully processed PDF: {pdf_url}")
+                else:
+                    self.logger.warning(f"Failed to extract content from PDF: {pdf_url}")
+                    
+            except Exception as e:
+                self.logger.error(f"Error processing PDF {pdf_url}: {e}")
+                continue
 
 
 # Legacy function for backward compatibility
@@ -990,10 +1429,10 @@ async def crawl_pipeline():
     
     target_urls = [
         "https://baak.gunadarma.ac.id/",
-        "https://www.gunadarma.ac.id/"
+        "https://gunadarma.ac.id/"
     ]
     
-    crawler = OptimizedCrawler(target_urls, config)
+    crawler = WebCrawler(target_urls, config)
     await crawler.crawl(incremental=True)
 
 

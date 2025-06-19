@@ -168,7 +168,7 @@ class TestSetupCrawlerIntegration:
         
         assert result is True
     @pytest.mark.asyncio
-    @patch('crawl.crawler.OptimizedCrawler')
+    @patch('crawl.crawler.WebCrawler')
     async def test_crawl_data_force_crawl(self, mock_crawler_class):
         """Test force crawl functionality with mocked crawler for speed"""
         # Mock crawler instance
@@ -207,8 +207,8 @@ class TestSetupCrawlerIntegration:
     @pytest.mark.asyncio
     async def test_crawl_data_fallback(self):
         """Test fallback to basic crawler"""
-        # Mock OptimizedCrawler to fail
-        with patch('crawl.crawler.OptimizedCrawler', side_effect=ImportError("No optimized crawler")):
+        # Mock WebCrawler to fail
+        with patch('crawl.crawler.WebCrawler', side_effect=ImportError("No optimized crawler")):
             try:
                 result = await self.setup.crawl_data()
                 # Should fallback to basic crawler or fail gracefully
@@ -414,7 +414,7 @@ def test_real_setup_integration():
 
 
 @pytest.mark.asyncio
-@patch('crawl.crawler.OptimizedCrawler')
+@patch('crawl.crawler.WebCrawler')
 async def test_quick_full_setup(mock_crawler_class):
     """Test simplified setup with mocked crawler for speed"""
     # Mock crawler

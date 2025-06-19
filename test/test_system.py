@@ -124,10 +124,9 @@ class RAGSystemTester:
         except Exception as e:
             self.test_results['data_cleaning']['sample_test'] = {'passed': False, 'error': str(e)}
             self._log_test_result("Data Cleaning - Sample Test", False, str(e))
-    
     async def test_vector_store(self):
-        """Test vector store functionality"""
-        logger.info("🗄️ Testing Vector Store...")
+        """Test optimized vector store functionality"""
+        logger.info("🗄️ Testing Optimized Vector Store...")
         
         try:
             from rag.vector_store import VectorStoreManager
@@ -139,35 +138,51 @@ class RAGSystemTester:
             
             assert 'document_count' in stats, "Stats should include document count"
             assert 'collection_name' in stats, "Stats should include collection name"
+            assert 'hnsw_params' in stats, "Stats should include HNSW parameters"
             
-            # Test metadata filtering
+            # Test basic similarity search (without metadata filtering)
             if stats.get('document_count', 0) > 0:
-                results = manager.search_with_metadata_filter(
-                    query="Universitas Gunadarma",
-                    metadata_filter={"source_type": "html"},
-                    k=3
+                # Test retriever initialization
+                retriever = manager.get_retriever(
+                    search_type="similarity_score_threshold",
+                    k=3,
+                    score_threshold=0.3
                 )
                 
-                assert isinstance(results, list), "Search should return a list"
+                assert retriever is not None, "Retriever should be initialized"
+                
+                # Test vector store initialization
+                vector_store = manager.initialize_vector_store()
+                assert vector_store is not None, "Vector store should be initialized"
                 
                 self.test_results['vector_store']['search_test'] = {
                     'passed': True,
-                    'results_count': len(results),
-                    'has_metadata_filter': True
+                    'document_count': stats['document_count'],
+                    'has_hnsw_params': True,
+                    'retriever_initialized': True
                 }
             else:
                 self.test_results['vector_store']['search_test'] = {
                     'passed': True,
-                    'results_count': 0,
+                    'document_count': 0,
                     'note': 'No documents in vector store'
                 }
             
+            # Test index creation capability
+            try:
+                manager.create_indexes()
+                index_creation_status = "successful"
+            except Exception as idx_error:
+                index_creation_status = f"failed: {str(idx_error)}"
+            
             self.test_results['vector_store']['stats'] = stats
-            self._log_test_result("Vector Store - Connection & Stats", True, stats)
+            self.test_results['vector_store']['index_creation'] = index_creation_status
+            self._log_test_result("Vector Store - Optimized Connection & Stats", True, 
+                                f"Documents: {stats.get('document_count', 0)}, HNSW: {stats.get('hnsw_params', {})}")
             
         except Exception as e:
             self.test_results['vector_store']['error'] = str(e)
-            self._log_test_result("Vector Store - Connection & Stats", False, str(e))
+            self._log_test_result("Vector Store - Optimized Connection & Stats", False, str(e))
     
     async def test_semantic_cache(self):
         """Test semantic cache functionality"""

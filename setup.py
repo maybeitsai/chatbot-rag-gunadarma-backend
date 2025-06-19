@@ -80,10 +80,10 @@ class RAGSystemSetup:
         logger.info(f"Cache management: {action}")
         
         try:
-            from crawl.crawler import AdvancedCacheManager, CrawlConfig
+            from crawl.crawler import CacheManager, CrawlConfig
             
             config = CrawlConfig()
-            cache_manager = AdvancedCacheManager(config)
+            cache_manager = CacheManager(config)
             
             if action == "status":
                 stats = cache_manager.get_cache_statistics()
@@ -173,11 +173,11 @@ class RAGSystemSetup:
         
         logger.info("Starting enhanced crawling with advanced caching...")
         try:
-            from crawl.crawler import OptimizedCrawler, CrawlConfig
+            from crawl.crawler import WebCrawler, CrawlConfig
             
             # Configure enhanced crawler with all caching features
             config = CrawlConfig(
-                max_depth=1,
+                max_depth=0,
                 similarity_threshold=0.8,
                 duplicate_threshold=0.95,
                 request_delay=1.0,
@@ -201,7 +201,7 @@ class RAGSystemSetup:
             
             # Target URLs for Gunadarma
             target_urls = [
-                "https://baak.gunadarma.ac.id/", "https://www.gunadarma.ac.id/"
+                "https://baak.gunadarma.ac.id/", "https://gunadarma.ac.id/"
             ]
             
             logger.info(f"[ENHANCED CRAWLING CONFIGURATION]")
@@ -213,24 +213,23 @@ class RAGSystemSetup:
             logger.info(f"   Max depth: {config.max_depth}")
             
             # Initialize and run crawler
-            crawler = OptimizedCrawler(target_urls, config)
+            crawler = WebCrawler(target_urls, config)
             report = await crawler.crawl(incremental=True)
             
             if report.get('status') == 'success':
                 summary = report['crawl_summary']
                 cache_stats = report.get('cache_statistics', {})
-                
-                # Log detailed results
+                  # Log detailed results
                 details = [
-                    f"Duration: {summary['duration_seconds']:.1f}s",
-                    f"Pages crawled: {summary['total_pages_crawled']}",
-                    f"PDFs processed: {summary['total_pdfs_processed']}",
-                    f"Pages updated: {summary['pages_updated']}",
-                    f"Pages skipped: {summary['pages_skipped']}",
+                    f"Duration: {summary.get('duration_seconds', 0):.1f}s",
+                    f"Pages crawled: {summary.get('total_pages_crawled', 0)}",
+                    f"PDFs processed: {summary.get('total_pdfs_processed', 0)}",
+                    f"Pages updated: {summary.get('pages_updated', 0)}",
+                    f"Pages skipped: {summary.get('pages_skipped', 0)}",
                     f"Duplicates skipped: {summary.get('duplicates_skipped', 0)}",
                     f"Cache hits: {summary.get('cache_hits', 0)}",
                     f"Cache hit rate: {cache_stats.get('hit_rate', 0):.1f}%",
-                    f"Total saved: {summary['total_saved']}"
+                    f"Total saved: {summary.get('total_saved', 0)}"
                 ]
                 
                 self.log_step(
@@ -263,11 +262,11 @@ class RAGSystemSetup:
         except ImportError as e:
             logger.warning(f"Enhanced crawler not available: {e}")
             logger.info("Falling back to basic crawler...")
-            
-            # Fallback to basic crawler
+              # Fallback to basic crawler
             try:
                 from crawl.crawler import crawl_pipeline
-                crawl_pipeline()
+                import asyncio
+                asyncio.run(crawl_pipeline())
                 self.log_step("Basic Data Crawling", True, "Successfully crawled data with basic crawler")
                 return True
             except Exception as e:
@@ -277,17 +276,17 @@ class RAGSystemSetup:
         except Exception as e:
             logger.error(f"Enhanced crawling failed: {e}")
             logger.info("Falling back to basic crawler...")
-            
-            # Fallback to basic crawler
+              # Fallback to basic crawler
             try:
                 from crawl.crawler import crawl_pipeline
-                crawl_pipeline()
+                import asyncio
+                asyncio.run(crawl_pipeline())
                 self.log_step("Fallback Data Crawling", True, "Successfully crawled data with basic crawler")
                 return True
             except Exception as fallback_e:
                 self.log_step("Data Crawling", False, f"Enhanced: {e}; Fallback: {fallback_e}")
                 return False
-    
+
     def process_and_optimize_data(self) -> bool:
         """Process and optimize data with cleaning"""
         logger.info("Processing and optimizing data...")
@@ -344,20 +343,133 @@ class RAGSystemSetup:
                 True, 
                 f"Cleaned {len(cleaned_data)} documents"
             )
+              # Convert cleaned data to Document objects for vector store
+            from langchain.schema import Document
+            documents = []
+            
+            logger.info(f"Converting {len(cleaned_data)} cleaned items to Document objects...")
+            if cleaned_data:
+                logger.info(f"Sample item keys: {list(cleaned_data[0].keys())}")
+            
+            for i, item in enumerate(cleaned_data):
+                if isinstance(item, dict):
+                    # Check various possible content field names
+                    content = (item.get('text_content') or 
+                              item.get('content') or 
+                              item.get('text') or 
+                              item.get('page_content') or '')
+                    
+                    if content and len(content.strip()) > 0:
+                        doc = Document(
+                            page_content=content,
+                            metadata={
+                                'url': item.get('url', ''),
+                                'source_type': item.get('source_type', 'unknown'),
+                                'title': item.get('title', ''),
+                                'content_length': len(content)
+                            }
+                        )
+                        documents.append(doc)
+                    else:
+                        if i < 3:  # Only show first 3 warnings to avoid spam
+                            logger.warning(f"Item {i} has no valid content. Keys: {list(item.keys())}")
+                else:
+                    logger.warning(f"Item {i} is not a dict: {type(item)}")
+            
+            if not documents:
+                self.log_step("Data Conversion", False, "No valid documents to convert")
+                return False
+            
+            self.log_step(
+                "Data Conversion", 
+                True, 
+                f"Converted {len(documents)} documents to Document objects"
+            )
             
             # Setup vector store
             vector_manager = VectorStoreManager()
-            vector_manager.setup_and_populate_from_documents(cleaned_data)
+            vector_manager.setup_and_populate_from_documents(documents)
             self.log_step(
                 "Vector Store Setup", 
                 True, 
                 "Vector store created and populated"
             )
             
+            # Create optimized indexes for better performance
+            logger.info("Creating optimized indexes for vector store...")
+            try:
+                vector_manager.create_indexes()
+                self.log_step(
+                    "Index Optimization", 
+                    True, 
+                    "HNSW and other performance indexes created"
+                )
+            except Exception as index_error:
+                self.log_step(
+                    "Index Optimization", 
+                    False, 
+                    f"Index creation failed (non-critical): {index_error}"
+                )
+                logger.warning("Vector store will work without optimized indexes, but with slower search")
+            
+            # Get and log vector store statistics
+            try:
+                stats = vector_manager.get_vector_store_stats()
+                logger.info(f"Vector Store Statistics:")
+                logger.info(f"  - Collection: {stats['collection_name']}")
+                logger.info(f"  - Documents: {stats['document_count']}")
+                logger.info(f"  - HNSW params: {stats['hnsw_params']}")
+            except Exception as stats_error:
+                logger.warning(f"Could not retrieve vector store stats: {stats_error}")
+            
             return True
             
         except Exception as e:
             self.log_step("Data Processing", False, str(e))
+            return False
+    
+    def test_vector_store(self) -> bool:
+        """Test vector store functionality specifically"""
+        logger.info("Testing vector store functionality...")
+        
+        try:
+            from rag.vector_store import VectorStoreManager
+            
+            # Initialize vector store
+            vector_manager = VectorStoreManager()
+            
+            # Test vector store stats
+            stats = vector_manager.get_vector_store_stats()
+            if stats.get('document_count', 0) == 0:
+                self.log_step("Vector Store Test", False, "No documents found in vector store")
+                return False
+            
+            # Test retriever initialization
+            retriever = vector_manager.get_retriever(
+                search_type="similarity_score_threshold",
+                k=3,
+                score_threshold=0.3
+            )
+            
+            if not retriever:
+                self.log_step("Vector Store Test", False, "Failed to initialize retriever")
+                return False
+            
+            # Test vector store initialization
+            vector_store = vector_manager.initialize_vector_store()
+            if not vector_store:
+                self.log_step("Vector Store Test", False, "Failed to initialize vector store")
+                return False
+            
+            self.log_step(
+                "Vector Store Test", 
+                True, 
+                f"Vector store working with {stats['document_count']} documents"
+            )
+            return True
+            
+        except Exception as e:
+            self.log_step("Vector Store Test", False, str(e))
             return False
     
     def test_system(self) -> bool:
@@ -419,14 +531,20 @@ class RAGSystemSetup:
                 return False
         else:
             logger.info("Skipping crawling as requested")
-        
-        # Step 5: Process and optimize data
+          # Step 5: Process and optimize data
         if not self.process_and_optimize_data():
             return False
         
-        # Step 6: Test system
+        # Step 6: Test vector store specifically
+        if not self.test_vector_store():
+            return False
+          # Step 7: Test complete system
         if not self.test_system():
             return False
+        
+        # Step 8: Final optimization
+        logger.info("Running final vector store optimization...")
+        self.optimize_vector_store()  # Non-critical, so don't fail if this doesn't work
         
         logger.info("=" * 60)
         logger.info("[SUCCESS] RAG SYSTEM SETUP COMPLETED SUCCESSFULLY!")
@@ -435,24 +553,82 @@ class RAGSystemSetup:
         logger.info("   [START] API: uv run uvicorn main:app --reload")
         logger.info("   [TEST] Run tests: uv run python test/test_system.py")
         logger.info("   [PERF] Check performance: uv run python test/test_performance.py") 
-        logger.info("   [OPT] Run optimization: uv run python optimize.py")
         logger.info("   [CACHE] Cache status: python setup.py --cache-status")
         logger.info("   [CRAWL] Recrawl data: python setup.py --crawl-only")
+        logger.info("   [OPTIMIZE] Optimize vector store: python setup.py --optimize-vector-store")
         
         return True
 
 
+    def optimize_vector_store(self) -> bool:
+        """Optimize vector store performance"""
+        logger.info("Optimizing vector store performance...")
+        
+        try:
+            from rag.vector_store import VectorStoreManager
+            
+            vector_manager = VectorStoreManager()
+            
+            # Clean up old collections if any
+            try:
+                vector_manager.cleanup_old_collections(keep_latest=2)
+                self.log_step(
+                    "Vector Store Cleanup", 
+                    True, 
+                    "Old collections cleaned up"
+                )
+            except Exception as cleanup_error:
+                self.log_step(
+                    "Vector Store Cleanup", 
+                    False, 
+                    f"Cleanup failed: {cleanup_error}"
+                )
+            
+            # Create optimized indexes
+            try:
+                vector_manager.create_indexes()
+                self.log_step(
+                    "Vector Store Optimization", 
+                    True, 
+                    "Performance indexes created"
+                )
+            except Exception as index_error:
+                self.log_step(
+                    "Vector Store Optimization", 
+                    False, 
+                    f"Index optimization failed: {index_error}"
+                )
+            
+            # Get final stats
+            stats = vector_manager.get_vector_store_stats()
+            logger.info("Final Vector Store Configuration:")
+            logger.info(f"  - Collection: {stats['collection_name']}")
+            logger.info(f"  - Total Documents: {stats['document_count']}")
+            logger.info(f"  - HNSW Parameters: {stats['hnsw_params']}")
+            
+            return True
+            
+        except Exception as e:
+            self.log_step("Vector Store Optimization", False, str(e))
+            return False
+
 async def main():
     """Enhanced main setup function with comprehensive options"""
     setup = RAGSystemSetup()
-    
-    # Parse command line arguments
+      # Parse command line arguments
     args = sys.argv[1:]
     
     # Command line options
     skip_crawling = "--skip-crawling" in args
     force_crawl = "--force-crawl" in args
     cache_only = "--cache-only" in args
+    optimize_only = "--optimize-vector-store" in args
+    
+    # Vector store optimization command
+    if optimize_only:
+        logger.info("Running vector store optimization only...")
+        success = setup.optimize_vector_store()
+        return 0 if success else 1
     
     # Cache management commands
     if "--cache-status" in args:
@@ -516,16 +692,17 @@ USAGE:
     python setup.py [OPTIONS]
 
 MAIN OPTIONS:
-    --help, -h          Show this help message
-    --skip-crawling     Skip data crawling, use existing data
-    --force-crawl       Force recrawl even if data exists
-    --crawl-only        Run enhanced crawling only, skip other steps
+    --help, -h             Show this help message
+    --skip-crawling        Skip data crawling, use existing data
+    --force-crawl          Force recrawl even if data exists
+    --crawl-only           Run enhanced crawling only, skip other steps
+    --optimize-vector-store Optimize vector store indexes only
 
 CACHE MANAGEMENT:
-    --cache-status      Show cache statistics
-    --cache-cleanup     Clean up expired cache entries
-    --cache-clear       Clear all cache data
-    --cache-only        Cache management mode only
+    --cache-status         Show cache statistics
+    --cache-cleanup        Clean up expired cache entries
+    --cache-clear          Clear all cache data
+    --cache-only           Cache management mode only
 
 EXAMPLES:
     # Complete setup with enhanced crawling
@@ -539,6 +716,9 @@ EXAMPLES:
 
     # Run enhanced crawling only
     python setup.py --crawl-only
+
+    # Optimize vector store performance
+    python setup.py --optimize-vector-store
 
     # Check cache status
     python setup.py --cache-status
