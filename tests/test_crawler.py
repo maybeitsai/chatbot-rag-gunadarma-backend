@@ -16,15 +16,14 @@ import time
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from crawl.crawler import (
-    WebCrawler, 
-    CrawlConfig, 
-    CacheManager,
-    UrlFilter,
-    RobotsChecker,
-    ContentManager,
-    PageData
-)
+from app.crawl.config import CrawlConfig
+from app.crawl.cache_manager import CacheManager
+from app.crawl.url_filter import UrlFilter
+from app.crawl.content_manager import ContentManager
+from app.crawl.models import PageData
+from app.crawl.crawler import WebCrawler
+from app.crawl.robots_checker import RobotsChecker
+
 
 
 class TestCrawlConfig:

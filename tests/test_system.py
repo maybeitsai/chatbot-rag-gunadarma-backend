@@ -77,7 +77,7 @@ class RAGSystemTester:
         logger.info("🧹 Testing Data Cleaning...")
         
         try:
-            from rag.data_cleaner import DataCleaner
+            from app.rag.data_cleaner import DataCleaner
               # Test with sample data
             sample_data = [
                 {
@@ -129,7 +129,7 @@ class RAGSystemTester:
         logger.info("🗄️ Testing Optimized Vector Store...")
         
         try:
-            from rag.vector_store import VectorStoreManager
+            from app.rag.vector_store import VectorStoreManager
             
             manager = VectorStoreManager()
             
@@ -189,7 +189,7 @@ class RAGSystemTester:
         logger.info("🧠 Testing Semantic Cache...")
         
         try:
-            from rag.semantic_cache import SemanticCache
+            from app.rag.semantic_cache import SemanticCache
             
             cache = SemanticCache(
                 cache_file="cache/test_cache.json",
@@ -477,10 +477,6 @@ class RAGSystemTester:
             'detailed_results': self.test_results
         }
         
-        # Save report
-        report_file = f"reports/test_report_{int(time.time())}.json"
-        with open(report_file, 'w', encoding='utf-8') as f:
-            json.dump(report, f, ensure_ascii=False, indent=2)
         
         # Print summary
         logger.info("=" * 60)
@@ -490,7 +486,6 @@ class RAGSystemTester:
         logger.info(f"Passed: {passed_tests}")
         logger.info(f"Failed: {self.test_results['overall']['failed']}")
         logger.info(f"Success Rate: {success_rate:.1f}%")
-        logger.info(f"Report saved to: {report_file}")
         
         if success_rate >= 80:
             logger.info("✅ OVERALL STATUS: GOOD")

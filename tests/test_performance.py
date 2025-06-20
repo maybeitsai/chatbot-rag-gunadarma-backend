@@ -48,7 +48,7 @@ class PerformanceTester:
         logger.info("Testing optimized RAG pipeline...")
         
         try:
-            from rag.pipeline import create_rag_pipeline
+            from app.rag.pipeline import create_rag_pipeline
             pipeline = create_rag_pipeline(enable_cache=True)
             
             if not pipeline.test_connection():
@@ -179,15 +179,6 @@ class PerformanceTester:
             "overall_verdict": "✅ Optimizations successful!" if len([s for s in summary if s.startswith("✅")]) > len([s for s in summary if s.startswith("❌")]) else "⚠️ Mixed results"
         }
     
-    def save_report(self, report: Dict[str, Any], filename: str = None):
-        """Save test report to file"""
-        if filename is None:
-            filename = f"reports/performance_test_report_{int(time.time())}.json"
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(report, f, indent=2, ensure_ascii=False)        
-        logger.info(f"Performance report saved to: {filename}")
-        return filename
     
     def print_report(self, report: Dict[str, Any]):
         """Print formatted test report"""
@@ -238,10 +229,6 @@ async def main():
         
         # Print report
         tester.print_report(report)
-        
-        # Save report
-        filename = tester.save_report(report)
-        print(f"\n📄 Full report saved to: {filename}")
         
     except Exception as e:
         logger.error(f"Test failed: {e}")

@@ -14,7 +14,7 @@ def test_health():
     """Test health endpoint"""
     print("🔍 Testing health endpoint...")
     try:
-        response = requests.get(f"{BASE_URL}/health")
+        response = requests.get(f"{BASE_URL}/api/v1/health")
         assert response.status_code == 200, f"Health check failed: {response.status_code}"
         print("✅ Health check passed")
     except Exception as e:
@@ -37,7 +37,7 @@ def test_stats():
     """Test stats endpoint"""
     print("🔍 Testing stats endpoint...")
     try:
-        response = requests.get(f"{BASE_URL}/stats")
+        response = requests.get(f"{BASE_URL}/api/v1/stats")
         assert response.status_code == 200, f"Stats endpoint failed: {response.status_code}"
         data = response.json()
         print(f"✅ Stats - LLM: {data.get('llm_model')}, Embedding: {data.get('embedding_model')}")
@@ -49,7 +49,7 @@ def test_examples():
     """Test examples endpoint"""
     print("🔍 Testing examples endpoint...")
     try:
-        response = requests.get(f"{BASE_URL}/examples")
+        response = requests.get(f"{BASE_URL}/api/v1/examples")
         assert response.status_code == 200, f"Examples endpoint failed: {response.status_code}"
         data = response.json()
         examples = data.get('example_questions', [])
@@ -64,7 +64,7 @@ def test_ask_question():
     print(f"🔍 Testing question: '{question}'")
     try:
         response = requests.post(
-            f"{BASE_URL}/ask",
+            f"{BASE_URL}/api/v1/ask",
             headers={"Content-Type": "application/json"},
             json={"question": question}
         )
