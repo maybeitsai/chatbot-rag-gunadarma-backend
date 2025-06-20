@@ -1,6 +1,6 @@
 [project]
 name = "Chatbot-RAG-UG"
-version = "0.1.1"
+version = "0.2.0"
 description = "Optimized RAG system with semantic caching, HNSW indexing, and async processing"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -15,22 +15,21 @@ dependencies = [
     "httpx>=0.28.1",
     "huggingface-hub>=0.32.3",
     "langchain>=0.3.25",
-    "langchain-community>=0.3.24",
+    "langchain-community>=0.3.21",
     "langchain-core>=0.3.63",
     "langchain-google-genai>=2.0.10",
-    "langchain-postgres>=0.0.13",
+    "langchain-postgres==0.0.14",
     "lxml>=5.4.0",
     "nest-asyncio>=1.6.0",
-    "numpy>=2.3.0",
     "pandas>=2.3.0",
     "pdfminer-six>=20250506",
     "pdfplumber>=0.11.7",
-    "pgvector>=0.3.6",
     "pipreqs>=0.5.0",
     "playwright>=1.52.0",
     "psutil>=7.0.0",
     "psycopg2-binary>=2.9.10",
     "pydantic>=2.11.7",
+    "pydantic-settings>=2.9.1",
     "pypdf2>=3.0.1",
     "pytest>=8.4.0",
     "pytest-asyncio>=1.0.0",
