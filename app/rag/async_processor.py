@@ -15,7 +15,7 @@ import time
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
 
-from rag.data_cleaner import DataCleaner
+from app.rag.data_cleaner import DataCleaner
 
 logger = logging.getLogger(__name__)
 

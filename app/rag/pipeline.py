@@ -10,9 +10,9 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 
 # Import custom modules
-from rag.vector_store import VectorStoreManager
-from rag.semantic_cache import get_semantic_cache
-from rag.async_processor import AsyncDataProcessor
+from app.rag.vector_store import VectorStoreManager
+from app.rag.semantic_cache import get_semantic_cache
+from app.rag.async_processor import AsyncDataProcessor
 
 # Langchain imports  
 try:
