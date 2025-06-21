@@ -5,6 +5,7 @@ from rich.text import Text
 
 console = Console()
 
+
 class Display:
     @staticmethod
     def show_welcome_banner():
@@ -13,10 +14,7 @@ class Display:
 Enhanced with Advanced Caching
         """
         panel = Panel(
-            banner.strip(),
-            title="Welcome",
-            border_style="bold blue",
-            padding=(1, 2)
+            banner.strip(), title="Welcome", border_style="bold blue", padding=(1, 2)
         )
         console.print(panel)
 
@@ -42,15 +40,15 @@ Enhanced with Advanced Caching
 
 System is ready! You can now:
 
-🚀 [bold cyan]START[/bold cyan] API: [code]uv run uvicorn main:app --reload[/code]
-🧪 [bold cyan]TEST[/bold cyan] Run tests: [code]uv run python test/test_system.py[/code]
-⚡ [bold cyan]PERF[/bold cyan] Check performance: [code]uv run python test/test_performance.py[/code]
-📈 [bold cyan]CACHE[/bold cyan] Cache status: [code]python setup.py cache-status[/code]
-🕷️ [bold cyan]CRAWL[/bold cyan] Recrawl data: [code]python setup.py crawl-only[/code]
+🚀 [bold cyan]START[/bold cyan] API: [code]uvicorn main:app --reload[/code]
+🧪 [bold cyan]TEST[/bold cyan] Run tests: [code]python tests/test_system.py[/code]
+⚡ [bold cyan]PERF[/bold cyan] Check performance: [code]python tests/test_performance.py[/code]
+📈 [bold cyan]CACHE[/bold cyan] Cache status: [code]python scripts/run.py cache-status[/code]
+🕷️  [bold cyan]CRAWL[/bold cyan] Recrawl data: [code]python scripts/run.py crawl-only[/code]
             """.strip(),
             title="🎯 Success",
             border_style="bold green",
-            padding=(1, 2)
+            padding=(1, 2),
         )
         console.print(success_panel)
 
@@ -70,12 +68,15 @@ System is ready! You can now:
         """Show environment check header"""
         console.print("🔧 Checking environment variables...")
 
+
 # Backward compatibility - keep the original functions
 def show_welcome_banner():
     Display.show_welcome_banner()
 
+
 def show_configuration(config):
     Display.show_configuration(config)
+
 
 def show_success_message():
     Display.show_success_message()

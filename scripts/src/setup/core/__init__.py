@@ -19,17 +19,12 @@ try:
     from scripts.src.setup.core.enums import SetupStep
     from scripts.src.setup.core.logger import Logger
     from scripts.src.setup.core.tracker import StepTracker
-    
-    __all__ = [
-        'SetupConfig',
-        'SetupStep', 
-        'Logger',
-        'StepTracker'
-    ]
-    
+
+    __all__ = ["SetupConfig", "SetupStep", "Logger", "StepTracker"]
+
 except ImportError:
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__description__ = 'Core utilities for RAG system setup'
+__version__ = "1.0.0"
+__description__ = "Core utilities for RAG system setup"

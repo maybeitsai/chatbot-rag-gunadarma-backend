@@ -38,28 +38,28 @@ try:
         DataProcessor,
         SystemTester,
         Logger,
-        StepTracker
+        StepTracker,
     )
-    
+
     __all__ = [
-        'cli_app',
-        'RAGSystemSetup',
-        'SetupConfig',
-        'SetupStep', 
-        'EnvironmentValidator',
-        'CacheManager',
-        'DataCrawler',
-        'DataProcessor',
-        'SystemTester',
-        'Logger',
-        'StepTracker'
+        "cli_app",
+        "RAGSystemSetup",
+        "SetupConfig",
+        "SetupStep",
+        "EnvironmentValidator",
+        "CacheManager",
+        "DataCrawler",
+        "DataProcessor",
+        "SystemTester",
+        "Logger",
+        "StepTracker",
     ]
-    
+
 except ImportError:
     # If imports fail, provide minimal interface
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__author__ = 'RAG System Development Team'
-__description__ = 'Scripts and tools for RAG system setup and management'
+__version__ = "1.0.0"
+__author__ = "RAG System Development Team"
+__description__ = "Scripts and tools for RAG system setup and management"

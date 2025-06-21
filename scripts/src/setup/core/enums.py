@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class SetupStep(Enum):
     ENVIRONMENT = "Environment Check"
     DATABASE = "Database Setup"

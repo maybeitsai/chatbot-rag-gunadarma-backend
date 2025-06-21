@@ -1,6 +1,7 @@
 from rich.console import Console
 from rich.prompt import Prompt
 
+
 class ConsoleManager:
     def __init__(self):
         self.console = Console()
@@ -9,7 +10,10 @@ class ConsoleManager:
         self.console.print(message, style=style)
 
     def prompt_confirmation(self, question: str, default: bool = True) -> bool:
-        return Prompt.ask(f"{question} [y/n]", default="y" if default else "n").lower() == "y"
+        return (
+            Prompt.ask(f"{question} [y/n]", default="y" if default else "n").lower()
+            == "y"
+        )
 
     def prompt_input(self, question: str, default: str = "") -> str:
         return Prompt.ask(question, default=default)

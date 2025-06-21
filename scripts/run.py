@@ -27,17 +27,17 @@ from scripts.src.setup.validators.environment import EnvironmentValidator
 
 # Expose classes for direct import
 __all__ = [
-    'cli_app',
-    'RAGSystemSetup',
-    'SetupConfig', 
-    'SetupStep',
-    'EnvironmentValidator',
-    'CacheManager',
-    'DataCrawler',
-    'DataProcessor', 
-    'SystemTester',
-    'Logger',
-    'StepTracker'
+    "cli_app",
+    "RAGSystemSetup",
+    "SetupConfig",
+    "SetupStep",
+    "EnvironmentValidator",
+    "CacheManager",
+    "DataCrawler",
+    "DataProcessor",
+    "SystemTester",
+    "Logger",
+    "StepTracker",
 ]
 
 if __name__ == "__main__":

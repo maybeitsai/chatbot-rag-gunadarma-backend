@@ -16,16 +16,13 @@ The main entry point is typically through the CLI app or the setup orchestrator.
 try:
     from scripts.src.cli.app import app as cli_app
     from scripts.src.setup.orchestrator import RAGSystemSetup
-    
-    __all__ = [
-        'cli_app',
-        'RAGSystemSetup'
-    ]
-    
+
+    __all__ = ["cli_app", "RAGSystemSetup"]
+
 except ImportError:
     # Graceful degradation if imports fail
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__description__ = 'Source modules for RAG system scripts'
+__version__ = "1.0.0"
+__description__ = "Source modules for RAG system scripts"

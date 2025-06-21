@@ -2,9 +2,11 @@
 
 from dataclasses import dataclass
 
+
 @dataclass
 class SetupConfig:
     """Configuration for setup process"""
+
     skip_crawling: bool = False
     force_crawl: bool = False
     cache_only: bool = False

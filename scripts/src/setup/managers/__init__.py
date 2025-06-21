@@ -20,17 +20,12 @@ try:
     from scripts.src.setup.managers.data_crawler import DataCrawler
     from scripts.src.setup.managers.data_processor import DataProcessor
     from scripts.src.setup.managers.system_tester import SystemTester
-    
-    __all__ = [
-        'CacheManager',
-        'DataCrawler',
-        'DataProcessor', 
-        'SystemTester'
-    ]
-    
+
+    __all__ = ["CacheManager", "DataCrawler", "DataProcessor", "SystemTester"]
+
 except ImportError:
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__description__ = 'Management components for RAG system setup'
+__version__ = "1.0.0"
+__description__ = "Management components for RAG system setup"

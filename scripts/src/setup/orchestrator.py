@@ -9,6 +9,7 @@ from scripts.src.setup.managers.system_tester import SystemTester
 from scripts.src.setup.validators.environment import EnvironmentValidator
 from scripts.src.setup.ui.display import Display
 
+
 class RAGSystemSetup:
     def __init__(self, config: SetupConfig):
         self.config = config
@@ -62,15 +63,22 @@ class RAGSystemSetup:
         is_valid, missing_vars = EnvironmentValidator.validate()
 
         if not is_valid:
-            self.tracker.log_step(SetupStep.ENVIRONMENT, False, f"Missing variables: {', '.join(missing_vars)}")
+            self.tracker.log_step(
+                SetupStep.ENVIRONMENT,
+                False,
+                f"Missing variables: {', '.join(missing_vars)}",
+            )
             return False
 
-        self.tracker.log_step(SetupStep.ENVIRONMENT, True, "All required variables found")
+        self.tracker.log_step(
+            SetupStep.ENVIRONMENT, True, "All required variables found"
+        )
         return True
 
     def setup_database(self) -> bool:
         try:
             from scripts.src.setup.db_setup import setup_database
+
             setup_database()
             self.tracker.log_step(SetupStep.DATABASE, True, "Database tables created")
             return True
@@ -81,6 +89,7 @@ class RAGSystemSetup:
     def optimize_vector_store(self) -> bool:
         try:
             from scripts.src.setup.vector_store import VectorStoreManager
+
             vector_manager = VectorStoreManager()
             vector_manager.cleanup_old_collections(keep_latest=2)
             vector_manager.create_indexes()

@@ -14,12 +14,12 @@ and system requirements early in the setup process.
 
 try:
     from scripts.src.setup.validators.environment import EnvironmentValidator
-    
-    __all__ = ['EnvironmentValidator']
-    
+
+    __all__ = ["EnvironmentValidator"]
+
 except ImportError:
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__description__ = 'Validation components for RAG system setup'
+__version__ = "1.0.0"
+__description__ = "Validation components for RAG system setup"

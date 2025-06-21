@@ -6,10 +6,12 @@ Database setup module for RAG System
 import logging
 from pathlib import Path
 
+
 def setup_database():
     """Setup database tables and connections"""
     try:
         from app.rag.db_setup import setup_db
+
         setup_db()
         logging.info("Database setup completed successfully")
         return True

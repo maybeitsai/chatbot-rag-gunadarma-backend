@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive Test Suite for setup.py
+Comprehensive Test Suite for run.py
 Tests all setup functionality including crawler integration, cache management, and pipeline execution
 """
 
@@ -590,7 +590,7 @@ class TestSetupIntegration:
         assert result is True
 
 class TestSetupPerformance:
-    """Test setup.py performance"""
+    """Test run.py performance"""
     
     def test_setup_initialization_performance(self):
         """Test setup initialization performance"""
@@ -626,7 +626,7 @@ class TestSetupPerformance:
 
 # Integration tests
 def test_setup_imports():
-    """Test setup.py imports"""
+    """Test run.py imports"""
     from scripts.run import RAGSystemSetup, SetupConfig, cli_app
     
     assert RAGSystemSetup is not None
@@ -640,7 +640,7 @@ def test_setup_imports():
     assert hasattr(setup, 'setup_database')
 
 def test_setup_file_structure():
-    """Test setup.py file structure"""
+    """Test run.py file structure"""
     setup_file = Path(__file__).parent.parent / "scripts" / "run.py"
     
     assert setup_file.exists(), "scripts/run.py file not found"
@@ -663,7 +663,7 @@ def test_setup_file_structure():
         assert component in content, f"Missing component: {component}"
 
 def test_setup_async_functionality():
-    """Test async functionality in setup.py"""
+    """Test async functionality in run.py"""
     import inspect
     from scripts.run import DataCrawler, RAGSystemSetup
       # Test DataCrawler async methods
@@ -793,15 +793,15 @@ def test_typer_app_structure():
 
 
 def test_real_setup_cli_integration():
-    """Test integration with real setup.py CLI"""
+    """Test integration with real run.py CLI"""
     setup_dir = Path(__file__).parent.parent
     setup_script = setup_dir / "scripts" / "run.py"
     
-    # Check if setup.py exists
+    # Check if run.py exists
     if not setup_script.exists():
         pytest.skip("run.py script not found")
     
-    # Test that setup.py can be run with --help
+    # Test that run.py can be run with --help
     try:
         # Add timeout and proper error handling
         result = subprocess.run([
@@ -900,15 +900,15 @@ async def test_quick_full_setup_with_typer(mock_crawler_class):
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 class TestSetupMainBlock:
-    """Test the main block execution in setup.py"""
+    """Test the main block execution in run.py"""
     
     def test_main_block_execution(self):
-        """Test that the main block in setup.py can be executed"""
+        """Test that the main block in run.py can be executed"""
         # Simple test to cover the main block by mocking cli_app execution
         with patch('scripts.src.cli.app.app') as mock_cli_app:
             try:
                 # Load the script content and execute it with __name__ == "__main__"
-                script_path = Path(__file__).parent.parent / "scripts" / "setup.py"
+                script_path = Path(__file__).parent.parent / "scripts" / "run.py"
                 
                 # Read and execute the script content with __name__ set to __main__
                 script_globals = {'__name__': '__main__', '__file__': str(script_path)}
@@ -936,7 +936,7 @@ class TestSetupMainBlock:
                 mock_cli_app.assert_called()
     
     def test_setup_module_imports(self):
-        """Test that all expected imports are available in setup.py"""
+        """Test that all expected imports are available in run.py"""
         from scripts import run
         
         # Test that all expected classes are available
@@ -953,7 +953,7 @@ class TestSetupMainBlock:
         assert 'RAGSystemSetup' in run.__all__
 
 if __name__ == "__main__":
-    print("🧪 SETUP.PY TEST SUITE (TYPER & RICH)")
+    print("🧪 RUN.PY TEST")
     print("=" * 50)
     
     # Run a quick smoke test
@@ -974,12 +974,12 @@ if __name__ == "__main__":
         print("✅ Typer CLI works")
         print("✅ Rich formatting enabled")
         
-        print("\n🎯 Setup.py is ready for production:")
-        print("   python scripts/setup.py --help")
-        print("   python scripts/setup.py env-check")
-        print("   python scripts/setup.py cache-status")
-        print("   python scripts/setup.py crawl-only")
-        print("   python scripts/setup.py setup")
+        print("\n🎯 Run.py is ready for production:")
+        print("   python scripts/run.py --help")
+        print("   python scripts/run.py env-check")
+        print("   python scripts/run.py cache-status")
+        print("   python scripts/run.py crawl-only")
+        print("   python scripts/run.py setup")
         
         print(f"\n📊 Test Results:")
         print(f"   Help command exit code: {result.exit_code}")

@@ -15,12 +15,12 @@ and interacting with the setup process.
 try:
     from scripts.src.setup.ui.console import Console
     from scripts.src.setup.ui.display import Display
-    
-    __all__ = ['Console', 'Display']
-    
+
+    __all__ = ["Console", "Display"]
+
 except ImportError:
     __all__ = []
 
 # Package metadata
-__version__ = '1.0.0'
-__description__ = 'User interface components for RAG system setup'
+__version__ = "1.0.0"
+__description__ = "User interface components for RAG system setup"
