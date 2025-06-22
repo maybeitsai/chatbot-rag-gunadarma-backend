@@ -1,6 +1,6 @@
 [project]
 name = "Chatbot-RAG-UG"
-version = "0.2.0"
+version = "1.0.0"
 description = "Optimized RAG system with semantic caching, HNSW indexing, and async processing"
 readme = "README.md"
 requires-python = ">=3.12"

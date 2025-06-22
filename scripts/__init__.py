@@ -1,19 +1,8 @@
 """
-Scripts package for RAG System Setup and Management.
+Scripts package untuk RAG system setup dan management
 
-This package contains CLI tools, setup orchestrators, and utilities
-for managing the RAG (Retrieval-Augmented Generation) system.
-
-Modules:
-    - run: Main entry point for the setup system
-    - src: Source code modules for setup functionality
-
-Usage:
-    From the command line:
-        python scripts/run.py
-
-    Or as a Python module:
-        from scripts.run import cli_app, RAGSystemSetup
+Package ini berisi CLI tools, setup orchestrators, dan utilities
+untuk mengelola RAG (Retrieval-Augmented Generation) system.
 """
 
 from pathlib import Path
@@ -59,7 +48,4 @@ except ImportError:
     # If imports fail, provide minimal interface
     __all__ = []
 
-# Package metadata
 __version__ = "1.0.0"
-__author__ = "RAG System Development Team"
-__description__ = "Scripts and tools for RAG system setup and management"

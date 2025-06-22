@@ -1,15 +1,8 @@
 """
-Source code modules for RAG System Scripts.
+Source code modules untuk RAG system scripts
 
-This package contains the core functionality for setting up and managing
-the RAG (Retrieval-Augmented Generation) system, including CLI interfaces,
-setup orchestration, and various utility modules.
-
-Subpackages:
-    - cli: Command-line interface components
-    - setup: Setup orchestration and management modules
-
-The main entry point is typically through the CLI app or the setup orchestrator.
+Package ini berisi core functionality untuk setup dan management
+RAG (Retrieval-Augmented Generation) system.
 """
 
 # Re-export main components for convenience
@@ -23,6 +16,4 @@ except ImportError:
     # Graceful degradation if imports fail
     __all__ = []
 
-# Package metadata
 __version__ = "1.0.0"
-__description__ = "Source modules for RAG system scripts"

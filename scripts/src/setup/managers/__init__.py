@@ -1,18 +1,8 @@
 """
-Managers package for RAG System Setup.
+Managers package untuk RAG system setup
 
-This package contains management components responsible for different
-aspects of the RAG system setup process, including caching, data crawling,
-data processing, and system testing.
-
-Modules:
-    - cache_manager: Cache management and optimization
-    - data_crawler: Web crawling and data collection
-    - data_processor: Data processing and transformation
-    - system_tester: System testing and validation
-
-Each manager handles a specific domain of the setup process and can be
-used independently or as part of the complete setup orchestration.
+Package ini berisi management components yang bertanggung jawab untuk
+berbagai aspek dari RAG system setup process.
 """
 
 try:
@@ -26,6 +16,5 @@ try:
 except ImportError:
     __all__ = []
 
-# Package metadata
 __version__ = "1.0.0"
 __description__ = "Management components for RAG system setup"

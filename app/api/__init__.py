@@ -45,7 +45,8 @@ __all__ = [
     'StatsResponse',
     'CacheResponse',
     'ExampleQuestionsResponse',
-      # Exceptions
+    
+    # Exceptions
     'RAGPipelineNotInitialized',
     'ApplicationStartupIncomplete',
     'EmptyQuestionError',
