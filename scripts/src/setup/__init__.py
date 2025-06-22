@@ -1,20 +1,8 @@
 """
-Setup package for RAG System.
+Setup package untuk RAG system
 
-This package contains all components needed for setting up and configuring
-the RAG (Retrieval-Augmented Generation) system, including orchestration,
-data management, validation, and user interface components.
-
-Subpackages:
-    - core: Core configuration, logging, and tracking utilities
-    - managers: Data management and processing components
-    - validators: Environment and configuration validation
-    - ui: User interface and display components
-
-Main Classes:
-    - RAGSystemSetup: Main orchestrator for the setup process
-    - SetupConfig: Configuration management
-    - EnvironmentValidator: Environment validation
+Package ini berisi semua komponen yang diperlukan untuk setup dan konfigurasi
+RAG (Retrieval-Augmented Generation) system.
 """
 
 try:
@@ -50,6 +38,4 @@ try:
 except ImportError:
     __all__ = []
 
-# Package metadata
 __version__ = "1.0.0"
-__description__ = "Setup orchestration and management for RAG system"

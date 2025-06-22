@@ -31,7 +31,7 @@ class Settings:
     # API configuration
     API_TITLE: str = "Gunadarma RAG API"
     API_DESCRIPTION: str = "Enhanced Retrieval-Augmented Generation API untuk informasi Universitas Gunadarma dengan semantic caching dan optimasi performa"
-    API_VERSION: str = "2.0.0"
+    API_VERSION: str = "1.0.0"
     
     # CORS configuration
     CORS_ORIGINS: list = ["*"]  # In production, specify allowed origins

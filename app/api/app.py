@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.dependencies import AppState
-from app.api.routes import question, health, cache, root
+from app.api.routes import question, health, cache, root, websocket
 from app.api.config import settings
 from app.api.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
 
@@ -99,12 +99,11 @@ def create_app() -> FastAPI:
     
     # Add custom middleware
     app.add_middleware(RequestLoggingMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware)
-    
-    # Include routers
+    app.add_middleware(SecurityHeadersMiddleware)    # Include routers
     app.include_router(root.router)
     app.include_router(question.router)
     app.include_router(health.router)
     app.include_router(cache.router)
+    app.include_router(websocket.router)
     
     return app
