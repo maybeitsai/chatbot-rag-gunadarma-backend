@@ -1,5 +1,5 @@
 """
-Fixed Vector Store with simplified indexing
+Fixed Vector Store with simplified indexing and Hybrid Search support
 Resolves pgvector dimension metadata issues
 """
 
@@ -14,14 +14,34 @@ import logging
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+# Import hybrid search components
+from app.rag.hybrid_search import HybridSearchManager, HybridSearchConfig, SearchType
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-class VectorStoreManager:
-    """Simplified vector store manager with basic indexing"""
+class HybridRetriever:
+    """Custom retriever that supports hybrid search"""
     
-    def __init__(self):
+    def __init__(self, vector_store: PGVector, hybrid_manager: HybridSearchManager, k: int = 5):
+        self.vector_store = vector_store
+        self.hybrid_manager = hybrid_manager
+        self.k = k
+    
+    def get_relevant_documents(self, query: str) -> List[Document]:
+        """Get relevant documents using hybrid search"""
+        return self.hybrid_manager.search(query, self.vector_store)
+    
+    def invoke(self, query: str) -> List[Document]:
+        """Invoke method for compatibility"""
+        return self.get_relevant_documents(query)
+
+
+class VectorStoreManager:
+    """Simplified vector store manager with basic indexing and hybrid search support"""
+    
+    def __init__(self, hybrid_config: Optional[HybridSearchConfig] = None):
         self.connection_string = os.getenv("NEON_CONNECTION_STRING")
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -41,6 +61,15 @@ class VectorStoreManager:
             "ef_construction": 64,  # Size of candidate list during index construction
             "ef_search": 40  # Size of candidate list during search
         }
+        
+        # Initialize hybrid search
+        self.hybrid_config = hybrid_config or HybridSearchConfig()
+        self.hybrid_search_manager = HybridSearchManager(
+            connection_string=self.connection_string,
+            collection_name=self.collection_name,
+            embeddings=self.embeddings,
+            config=self.hybrid_config
+        )
 
     def _get_database_connection(self):
         """Get database connection for direct SQL operations"""
@@ -209,19 +238,29 @@ class VectorStoreManager:
     def get_retriever(self, 
                      search_type: str = "similarity_score_threshold",
                      k: int = 5,
-                     score_threshold: float = 0.3):
+                     score_threshold: float = 0.3,
+                     use_hybrid: bool = False):
         """
-        Get optimized retriever for fast similarity search
+        Get optimized retriever for fast similarity search with hybrid support
         
         Args:
-            search_type: Type of search ('similarity', 'similarity_score_threshold', 'mmr')
+            search_type: Type of search ('similarity', 'similarity_score_threshold', 'mmr', 'hybrid')
             k: Number of documents to retrieve
             score_threshold: Minimum similarity score threshold
+            use_hybrid: Whether to use hybrid search
             
         Returns:
-            Configured retriever
+            Configured retriever or hybrid search results
         """
         vector_store = self.initialize_vector_store()
+        
+        # If hybrid search is requested
+        if use_hybrid or search_type == "hybrid":
+            return HybridRetriever(
+                vector_store=vector_store,
+                hybrid_manager=self.hybrid_search_manager,
+                k=k
+            )
         
         search_kwargs = {"k": k}
         
@@ -249,10 +288,14 @@ class VectorStoreManager:
                     result = cur.fetchone()
                     document_count = result['document_count'] if result else 0
                     
+                    # Get hybrid search stats
+                    hybrid_stats = self.hybrid_search_manager.get_stats()
+                    
                     return {
                         'collection_name': self.collection_name,
                         'document_count': document_count,
-                        'hnsw_params': self.hnsw_params
+                        'hnsw_params': self.hnsw_params,
+                        'hybrid_search': hybrid_stats
                     }
                     
         except Exception as e:
@@ -260,14 +303,16 @@ class VectorStoreManager:
             return {
                 'collection_name': self.collection_name,
                 'document_count': 0,
-                'hnsw_params': self.hnsw_params
+                'hnsw_params': self.hnsw_params,
+                'hybrid_search': {}
             }
 
     def cleanup_old_collections(self, keep_latest: int = 2):
         """Clean up old collections to save space"""
         try:
             with self._get_database_connection() as conn:
-                with conn.cursor() as cur:                    # Get all collections (simplified query without JSON ordering)
+                with conn.cursor() as cur:
+                    # Get all collections (simplified query without JSON ordering)
                     cur.execute("""
                         SELECT name 
                         FROM langchain_pg_collection;
@@ -312,6 +357,11 @@ class VectorStoreManager:
                 logger.info(f"Added batch {i//batch_size + 1}/{(len(documents) + batch_size - 1)//batch_size}")
             
             logger.info(f"Successfully populated vector store with {len(documents)} documents")
+            
+            # Invalidate hybrid search cache when new documents are added
+            self.hybrid_search_manager.invalidate_cache()
+            logger.info("Invalidated hybrid search cache for new documents")
+            
             return True
             
         except Exception as e:
@@ -337,9 +387,29 @@ class VectorStoreManager:
             self.create_indexes()
             logger.info("Successfully created performance indexes")
             
+            # Invalidate hybrid search cache when new documents are added
+            self.hybrid_search_manager.invalidate_cache()
+            logger.info("Invalidated hybrid search cache for new documents")
+            
             logger.info(f"Successfully populated vector store with {len(documents)} documents")
             return True
             
         except Exception as e:
             logger.error(f"Error setting up vector store: {e}")
             return False
+
+    def update_hybrid_config(self, new_config: HybridSearchConfig):
+        """Update hybrid search configuration"""
+        try:
+            new_config.validate()
+            self.hybrid_config = new_config
+            self.hybrid_search_manager = HybridSearchManager(
+                connection_string=self.connection_string,
+                collection_name=self.collection_name,
+                embeddings=self.embeddings,
+                config=self.hybrid_config
+            )
+            logger.info(f"Updated hybrid search configuration: {new_config}")
+        except Exception as e:
+            logger.error(f"Error updating hybrid config: {e}")
+            raise

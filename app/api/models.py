@@ -8,6 +8,7 @@ from typing import List, Optional, Dict, Any
 class QuestionRequest(BaseModel):
     question: str
     use_cache: Optional[bool] = True
+    use_hybrid: Optional[bool] = False
     metadata_filter: Optional[Dict[str, Any]] = None
 
 
@@ -19,11 +20,13 @@ class QuestionResponse(BaseModel):
     response_time: Optional[float] = None
     cached: Optional[bool] = False
     cache_type: Optional[str] = None
+    search_type: Optional[str] = None
 
 
 class BatchQuestionRequest(BaseModel):
     questions: List[str]
     use_cache: Optional[bool] = True
+    use_hybrid: Optional[bool] = False
 
 
 class BatchQuestionResponse(BaseModel):

@@ -19,16 +19,18 @@ class RAGService:
         rag_pipeline, 
         question: str, 
         metadata_filter: Optional[Dict[str, Any]] = None,
-        use_cache: bool = True
+        use_cache: bool = True,
+        use_hybrid: bool = False
     ) -> QuestionResponse:
-        """Process single question"""
+        """Process single question with hybrid search support"""
         try:
             # Use async method if available
             if hasattr(rag_pipeline, 'ask_question_async'):
                 result = await rag_pipeline.ask_question_async(
                     question=question,
                     metadata_filter=metadata_filter,
-                    use_cache=use_cache
+                    use_cache=use_cache,
+                    use_hybrid=use_hybrid
                 )
             else:
                 # Fallback to synchronous method
@@ -41,31 +43,35 @@ class RAGService:
                 source_count=result.get("source_count", 0),
                 response_time=result.get("response_time"),
                 cached=result.get("cached", False),
-                cache_type=result.get("cache_type")
+                cache_type=result.get("cache_type"),
+                search_type=result.get("search_type", "vector")
             )
             
         except Exception as e:
             logger.error(f"Error processing question: {e}")
-            raise InternalServerError(str(e))
-    
+            raise InternalServerError(str(e))    
     @staticmethod
     async def process_batch_questions(
         rag_pipeline, 
         questions: List[str], 
-        use_cache: bool = True
+        use_cache: bool = True,
+        use_hybrid: bool = False
     ) -> tuple[List[QuestionResponse], float]:
-        """Process batch questions"""
+        """Process batch questions with hybrid search support"""
         try:
             start_time = time.time()
             
             # Use batch processing if available (optimized pipeline)
             if hasattr(rag_pipeline, 'batch_questions'):
-                results = await rag_pipeline.batch_questions(questions)
+                results = await rag_pipeline.batch_questions(questions, use_hybrid=use_hybrid)
             else:
                 # Fallback to sequential processing
                 results = []
                 for question in questions:
-                    result = rag_pipeline.ask_question(question)
+                    if hasattr(rag_pipeline, 'ask_question_async'):
+                        result = await rag_pipeline.ask_question_async(question, use_hybrid=use_hybrid)
+                    else:
+                        result = rag_pipeline.ask_question(question)
                     results.append(result)
             
             processing_time = time.time() - start_time
@@ -80,7 +86,8 @@ class RAGService:
                     source_count=result.get("source_count", 0),
                     response_time=result.get("response_time"),
                     cached=result.get("cached", False),
-                    cache_type=result.get("cache_type")
+                    cache_type=result.get("cache_type"),
+                    search_type=result.get("search_type", "vector")
                 ))
             
             return response_results, round(processing_time, 3)

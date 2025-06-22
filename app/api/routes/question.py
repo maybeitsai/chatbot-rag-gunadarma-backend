@@ -21,7 +21,7 @@ async def ask_question(
     request: QuestionRequest,
     rag_pipeline=Depends(get_rag_pipeline)
 ):
-    """Enhanced endpoint untuk mengajukan pertanyaan dengan dukungan async dan caching"""
+    """Enhanced endpoint untuk mengajukan pertanyaan dengan dukungan async, caching, dan hybrid search"""
     if not request.question.strip():
         raise EmptyQuestionError()
     
@@ -29,7 +29,8 @@ async def ask_question(
         rag_pipeline=rag_pipeline,
         question=request.question,
         metadata_filter=request.metadata_filter,
-        use_cache=request.use_cache
+        use_cache=request.use_cache,
+        use_hybrid=request.use_hybrid
     )
 
 
@@ -43,12 +44,12 @@ async def ask_questions_batch(
         raise EmptyQuestionListError()
     
     if len(request.questions) > 10:  # Limit batch size
-        raise BatchSizeLimitError(max_size=10)
-    
+        raise BatchSizeLimitError(max_size=10)    
     results, processing_time = await RAGService.process_batch_questions(
         rag_pipeline=rag_pipeline,
         questions=request.questions,
-        use_cache=request.use_cache
+        use_cache=request.use_cache,
+        use_hybrid=request.use_hybrid
     )
     
     return BatchQuestionResponse(

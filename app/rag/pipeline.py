@@ -13,6 +13,7 @@ import logging
 from app.rag.vector_store import VectorStoreManager
 from app.rag.semantic_cache import get_semantic_cache
 from app.rag.async_processor import AsyncDataProcessor
+from app.rag.hybrid_search import HybridSearchConfig, SearchType
 
 # Langchain imports  
 try:
@@ -31,10 +32,11 @@ logger = logging.getLogger(__name__)
 class RAGPipeline:
     """
     Enhanced RAG Pipeline with semantic caching, optimized vector store,
-    and asynchronous processing capabilities
+    asynchronous processing capabilities, and hybrid search support
     """
     
-    def __init__(self, enable_cache: bool = True, cache_similarity_threshold: float = 0.85):
+    def __init__(self, enable_cache: bool = True, cache_similarity_threshold: float = 0.85,
+                 hybrid_config: Optional[HybridSearchConfig] = None):
         # Configuration
         self.llm_model = os.getenv("LLM_MODEL", "gemini-2.5-flash-preview-05-20")
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
@@ -58,8 +60,9 @@ class RAGPipeline:
             google_api_key=self.google_api_key
         )
         
-        # Initialize optimized vector store
-        self.vector_store_manager = VectorStoreManager()
+        # Initialize optimized vector store with hybrid search
+        self.hybrid_config = hybrid_config or HybridSearchConfig()
+        self.vector_store_manager = VectorStoreManager(hybrid_config=self.hybrid_config)
         self.vector_store = self.vector_store_manager.initialize_vector_store()
         
         # Enhanced prompt template
@@ -92,8 +95,7 @@ Jawaban:
             'avg_response_time': 0.0,
             'total_response_time': 0.0
         }
-        
-        # Thread pool for async operations
+          # Thread pool for async operations
         self.thread_pool = ThreadPoolExecutor(max_workers=4)
         
         logger.info("Optimized RAG Pipeline initialized successfully")
@@ -114,14 +116,24 @@ Jawaban:
         except Exception as e:
             logger.warning(f"Could not get question embedding: {e}")
             return None
-    def _setup_retriever(self, metadata_filter: Optional[Dict[str, Any]] = None) -> Any:
-        """Setup optimized retriever - metadata filtering removed for performance"""
+
+    def _setup_retriever(self, metadata_filter: Optional[Dict[str, Any]] = None, 
+                       use_hybrid: bool = False) -> Any:
+        """Setup optimized retriever with hybrid search support"""
         
         # Dynamic retrieval parameters optimized for similarity search
         search_kwargs = {
-            "k": 8,  # Increased for better context
-            "score_threshold": 0.25  # Slightly lower threshold for more results
+            "k": 5,  # Increased for better context
+            "score_threshold": 0.5  # Slightly lower threshold for more results
         }
+        
+        # Use hybrid search if requested
+        if use_hybrid:
+            return self.vector_store_manager.get_retriever(
+                search_type="hybrid",
+                k=search_kwargs["k"],
+                use_hybrid=True
+            )
         
         # Note: metadata filtering removed as it's not supported in optimized vector store
         # The optimized version focuses on pure similarity search for better performance
@@ -131,11 +143,12 @@ Jawaban:
         return self.vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs=search_kwargs
-        )
-    
-    async def _get_retrieval_results(self, question: str, metadata_filter: Optional[Dict[str, Any]] = None) -> List[Document]:
-        """Get retrieval results asynchronously"""
-        retriever = self._setup_retriever(metadata_filter)
+        )    
+    async def _get_retrieval_results(self, question: str, 
+                                   metadata_filter: Optional[Dict[str, Any]] = None,
+                                   use_hybrid: bool = False) -> List[Document]:
+        """Get retrieval results asynchronously with hybrid search support"""
+        retriever = self._setup_retriever(metadata_filter, use_hybrid)
         
         loop = asyncio.get_event_loop()
         try:
@@ -211,19 +224,21 @@ Jawaban:
                 "answer": f"Maaf, terjadi kesalahan dalam memproses pertanyaan: {str(e)}",
                 "source_urls": [],
                 "status": "error",
-                "source_count": 0
-            }
+                "source_count": 0            }
+
     async def ask_question_async(self, 
                                question: str, 
                                metadata_filter: Optional[Dict[str, Any]] = None,
-                               use_cache: bool = True) -> Dict[str, Any]:
+                               use_cache: bool = True,
+                               use_hybrid: bool = False) -> Dict[str, Any]:
         """
-        Process question asynchronously with caching and optimization
+        Process question asynchronously with caching, optimization, and hybrid search
         
         Args:
             question: User question
             metadata_filter: Not used in optimized version (kept for API compatibility)
             use_cache: Whether to use semantic caching
+            use_hybrid: Whether to use hybrid search (vector + keyword)
             
         Returns:
             Response dictionary with answer, sources, and metadata
@@ -243,13 +258,17 @@ Jawaban:
                     self._update_performance_metrics(response_time)
                     
                     cached_response['response_time'] = round(response_time, 3)
+                    cached_response['search_type'] = 'hybrid' if use_hybrid else 'vector'
                     return cached_response
             
-            # Get retrieval results
-            context_docs = await self._get_retrieval_results(question, metadata_filter)
+            # Get retrieval results with optional hybrid search
+            context_docs = await self._get_retrieval_results(question, metadata_filter, use_hybrid)
             
             # Generate answer
             result = await self._generate_answer(question, context_docs)
+            
+            # Add search type info
+            result['search_type'] = 'hybrid' if use_hybrid else 'vector'
             
             # Cache the result
             if self.enable_cache and use_cache and result['status'] in ['success', 'not_found']:
@@ -272,9 +291,10 @@ Jawaban:
             return {
                 "answer": f"Maaf, terjadi kesalahan sistem: {str(e)}",
                 "source_urls": [],
-                "status": "error",
-                "source_count": 0,
-                "response_time": round(response_time, 3),                "cached": False
+                "status": "error",                "source_count": 0,
+                "response_time": round(response_time, 3),
+                "cached": False,
+                "search_type": 'hybrid' if use_hybrid else 'vector'
             }
     
     def ask_question(self, question: str) -> Dict[str, Any]:
