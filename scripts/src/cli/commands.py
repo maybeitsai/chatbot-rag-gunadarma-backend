@@ -65,12 +65,11 @@ def process_only(log_level: str = "INFO"):
     """Process existing data only, skip crawling"""
     config = SetupConfig(
         skip_crawling=True,
-        process_only=True,
         log_level=log_level,
     )
 
     setup_instance = RAGSystemSetup(config)
-    success = asyncio.run(setup_instance.data_processor.process_data())
+    success = setup_instance.data_processor.process_and_optimize_data()
 
     if not success:
         console.print("❌ Data processing failed.", style="red")

@@ -50,8 +50,8 @@ class RAGPipeline:
         self.llm = ChatGoogleGenerativeAI(
             model=self.llm_model,
             google_api_key=self.google_api_key,
-            temperature=0.1,  # Slightly higher for more natural responses
-            max_output_tokens=1024
+            temperature=0.1,
+            max_output_tokens=512
         )
         
         # Initialize embeddings for caching
@@ -69,22 +69,25 @@ class RAGPipeline:
         self.prompt_template = PromptTemplate(
             input_variables=["context", "question"],
             template="""
-Anda adalah asisten AI yang membantu memberikan informasi tentang Universitas Gunadarma berdasarkan dokumen resmi yang tersedia.
+Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan akurat. Anda didesain untuk menyediakan jawaban yang **tepat, ringkas, dan relevan** berdasarkan informasi yang **secara eksklusif** ditemukan dalam dokumen sumber yang diberikan.
 
-ATURAN PENTING:
-1. HANYA gunakan informasi dari konteks dokumen yang diberikan di bawah ini
-2. Jika informasi tersedia dalam konteks, berikan jawaban yang lengkap dan informatif
-3. SELALU sertakan URL sumber yang relevan dalam format: "Sumber: [URL]"
-4. Jika informasi tidak tersedia dalam konteks, jawab: "Maaf, informasi tersebut tidak tersedia dalam database kami saat ini."
-5. Berikan jawaban dalam bahasa Indonesia yang jelas dan mudah dipahami
-6. Struktur jawaban dengan baik menggunakan paragraf dan poin-poin jika diperlukan
+**Panduan Jawaban Mutlak:**
 
-Konteks dari dokumen resmi Universitas Gunadarma:
+1.  **Sumber Informasi Tunggal:** Jawaban Anda harus **hanya dan hanya** berasal dari **'Konteks Dokumen'** yang disediakan di bawah. Jangan pernah mengintegrasikan pengetahuan eksternal, asumsi pribadi, atau informasi dari sumber lain.
+2.  **Respons Wajib:** Anda **harus selalu memberikan respons**. Jangan pernah membiarkan jawaban kosong atau tidak ada.
+3.  **Penanganan Informasi Tidak Tersedia:** Jika pertanyaan pengguna tidak dapat dijawab secara langsung atau inferensi logis dari **'Konteks Dokumen'**, Anda harus merespons dengan frasa standar ini: "**Maaf, informasi mengenai hal tersebut tidak tersedia dalam data kami.**" Ini adalah **satu-satunya** respons yang diizinkan jika informasi tidak ditemukan.
+4.  **Klaritas dan Presisi:** Gunakan bahasa Indonesia yang **jelas, langsung, dan informatif**. Hindari ambiguitas, jargon yang tidak perlu, atau kalimat bertele-tele. Prioritaskan keringkasan tanpa mengurangi kelengkapan informasi yang relevan.
+5.  **Fokus pada Pertanyaan:** Langsung berikan jawaban yang relevan dengan pertanyaan pengguna. Jangan pernah mengulangi atau memparafrasekan pertanyaan itu sendiri.
+6.  **Tanpa Referensi Eksternal:** Anda dilarang mencantumkan URL sumber atau referensi lain dalam jawaban Anda. Semua informasi sudah terkandung dalam konteks.
+7.  **Konsistensi:** Pastikan setiap jawaban konsisten dengan pedoman ini.
+
+**Konteks Dokumen:**
 {context}
 
-Pertanyaan: {question}
+**Pertanyaan Pengguna:**
+{question}
 
-Jawaban:
+**Jawaban:**
 """
         )
         
@@ -123,8 +126,8 @@ Jawaban:
         
         # Dynamic retrieval parameters optimized for similarity search
         search_kwargs = {
-            "k": 5,  # Increased for better context
-            "score_threshold": 0.5  # Slightly lower threshold for more results
+            "k": 5,
+            "score_threshold": 0.5
         }
         
         # Use hybrid search if requested
@@ -291,7 +294,8 @@ Jawaban:
             return {
                 "answer": f"Maaf, terjadi kesalahan sistem: {str(e)}",
                 "source_urls": [],
-                "status": "error",                "source_count": 0,
+                "status": "error",
+                "source_count": 0,
                 "response_time": round(response_time, 3),
                 "cached": False,
                 "search_type": 'hybrid' if use_hybrid else 'vector'
@@ -380,7 +384,8 @@ Jawaban:
             "vector_store": vector_stats,
             "configuration": {
                 "llm_model": self.llm_model,
-                "embedding_model": self.embedding_model,                "cache_enabled": self.enable_cache
+                "embedding_model": self.embedding_model,
+                "cache_enabled": self.enable_cache
             }
         }
     
