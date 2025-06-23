@@ -6,7 +6,7 @@ RAG system setup dan management functionality.
 """
 
 try:
-    from scripts.src.cli.app import app
+    from scripts.src.cli.commands import app
 
     __all__ = ["app"]
 

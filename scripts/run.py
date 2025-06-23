@@ -11,7 +11,7 @@ SCRIPT_DIR = Path(__file__).parent
 BACKEND_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(BACKEND_DIR))
 
-from scripts.src.cli.app import app as cli_app
+from scripts.src.cli.commands import app as cli_app
 
 # Import classes from their proper modules
 from scripts.src.setup.orchestrator import RAGSystemSetup

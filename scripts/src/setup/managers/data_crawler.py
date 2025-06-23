@@ -88,7 +88,7 @@ class DataCrawler:
     def _get_crawl_config(self):
         """Get optimized crawl configuration"""
         return CrawlConfig(
-            max_depth=0,
+            max_depth=3,
             similarity_threshold=0.8,
             duplicate_threshold=0.95,
             request_delay=1.0,

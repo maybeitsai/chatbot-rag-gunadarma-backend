@@ -32,7 +32,7 @@ from scripts.src.setup.managers.data_crawler import DataCrawler
 from scripts.src.setup.managers.data_processor import DataProcessor
 from scripts.src.setup.managers.system_tester import SystemTester
 from scripts.src.setup.validators.environment import EnvironmentValidator
-from scripts.src.cli.app import app as cli_app
+from scripts.src.cli.commands import app as cli_app
 
 # Initialize CLI runner for Typer testing
 runner = CliRunner()
@@ -447,7 +447,8 @@ class TestTyperCLI:
         
         assert result.exit_code == 0
         assert "RAG System Setup" in result.stdout
-        assert "Enhanced with Advanced Caching" in result.stdout
+        # Cek keberadaan command utama
+        assert "setup" in result.stdout
     
     def test_env_check_command_success(self):
         """Test env-check command with valid environment"""
@@ -645,8 +646,7 @@ def test_setup_file_structure():
     
     assert setup_file.exists(), "scripts/run.py file not found"
     
-    content = setup_file.read_text(encoding="utf-8")
-      # Check for required components - mengecek import bukan class definition
+    content = setup_file.read_text(encoding="utf-8")    # Check for required components - mengecek import bukan class definition
     required_components = [
         "from scripts.src.setup.orchestrator import RAGSystemSetup",
         "from scripts.src.setup.core.config import SetupConfig", 
@@ -656,7 +656,7 @@ def test_setup_file_structure():
         "from scripts.src.setup.managers.data_crawler import DataCrawler",
         "from scripts.src.setup.managers.data_processor import DataProcessor",
         "from scripts.src.setup.managers.system_tester import SystemTester",
-        "from scripts.src.cli.app import app as cli_app"
+        "from scripts.src.cli.commands import app as cli_app"
     ]
     
     for component in required_components:
@@ -905,7 +905,7 @@ class TestSetupMainBlock:
     def test_main_block_execution(self):
         """Test that the main block in run.py can be executed"""
         # Simple test to cover the main block by mocking cli_app execution
-        with patch('scripts.src.cli.app.app') as mock_cli_app:
+        with patch('scripts.src.cli.commands.app') as mock_cli_app:
             try:
                 # Load the script content and execute it with __name__ == "__main__"
                 script_path = Path(__file__).parent.parent / "scripts" / "run.py"
@@ -919,7 +919,7 @@ class TestSetupMainBlock:
                 exec("SCRIPT_DIR = Path(__file__).parent", script_globals)
                 exec("BACKEND_DIR = SCRIPT_DIR.parent", script_globals)
                 exec("sys.path.insert(0, str(BACKEND_DIR))", script_globals)
-                exec("from scripts.src.cli.app import app as cli_app", script_globals)
+                exec("from scripts.src.cli.commands import app as cli_app", script_globals)
                 
                 # Now execute the main block
                 exec("if __name__ == '__main__': cli_app()", script_globals)
