@@ -34,7 +34,7 @@ async def ask_question(
     )
 
 
-@router.post("/api/v1/batch", response_model=BatchQuestionResponse)
+@router.post("/batch", response_model=BatchQuestionResponse)
 async def ask_questions_batch(
     request: BatchQuestionRequest,
     rag_pipeline=Depends(get_rag_pipeline)
