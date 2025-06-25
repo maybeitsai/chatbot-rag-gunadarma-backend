@@ -9,7 +9,6 @@ class QuestionRequest(BaseModel):
     question: str
     use_cache: Optional[bool] = True
     use_hybrid: Optional[bool] = False
-    metadata_filter: Optional[Dict[str, Any]] = None
 
 
 class QuestionResponse(BaseModel):

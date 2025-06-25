@@ -18,9 +18,8 @@ class RAGService:
     async def process_question(
         rag_pipeline, 
         question: str, 
-        metadata_filter: Optional[Dict[str, Any]] = None,
         use_cache: bool = True,
-        use_hybrid: bool = False
+        use_hybrid: bool = True
     ) -> QuestionResponse:
         """Process single question with hybrid search support"""
         try:
@@ -28,7 +27,6 @@ class RAGService:
             if hasattr(rag_pipeline, 'ask_question_async'):
                 result = await rag_pipeline.ask_question_async(
                     question=question,
-                    metadata_filter=metadata_filter,
                     use_cache=use_cache,
                     use_hybrid=use_hybrid
                 )
@@ -55,7 +53,7 @@ class RAGService:
         rag_pipeline, 
         questions: List[str], 
         use_cache: bool = True,
-        use_hybrid: bool = False
+        use_hybrid: bool = True
     ) -> tuple[List[QuestionResponse], float]:
         """Process batch questions with hybrid search support"""
         try:

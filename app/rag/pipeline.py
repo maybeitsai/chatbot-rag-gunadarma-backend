@@ -35,7 +35,7 @@ class RAGPipeline:
     asynchronous processing capabilities, and hybrid search support
     """
     
-    def __init__(self, enable_cache: bool = True, cache_similarity_threshold: float = 0.85,
+    def __init__(self, enable_cache: bool = True,
                  hybrid_config: Optional[HybridSearchConfig] = None):
         # Configuration
         self.llm_model = os.getenv("LLM_MODEL", "gemini-2.5-flash-preview-05-20")
@@ -50,8 +50,8 @@ class RAGPipeline:
         self.llm = ChatGoogleGenerativeAI(
             model=self.llm_model,
             google_api_key=self.google_api_key,
-            temperature=0.1,
-            max_output_tokens=512
+            temperature=0.32,
+            max_output_tokens=1024
         )
         
         # Initialize embeddings for caching
@@ -69,24 +69,54 @@ class RAGPipeline:
         self.prompt_template = PromptTemplate(
             input_variables=["context", "question"],
             template="""
-Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan akurat. Anda didesain untuk menyediakan jawaban yang **tepat, ringkas, dan relevan secara mutlak**. Anda akan memprioritaskan informasi dari dokumen sumber yang diberikan. Namun, dalam kasus tertentu, Anda dapat memanfaatkan pengetahuan internal Anda yang valid, terverifikasi, dan dapat diuji, bukan informasi buatan atau menipu.
+**Peran dan Tujuan Utama**
 
-**Batasan Topik Absolut: Hanya Universitas Gunadarma.**
+Anda adalah Asisten AI spesialis Universitas Gunadarma. Peran Anda adalah memberikan jawaban yang **akurat, ringkas, dan relevan** berdasarkan sumber yang diberikan atau pengetahuan internal yang terverifikasi. **Fokus absolut Anda adalah informasi seputar Universitas Gunadarma.**
 
-**Panduan Jawaban Mutlak:**
+---
 
-1.  **Prioritas Sumber: Konteks Dokumen Universitas Gunadarma:** Jawaban Anda harus **selalu diutamakan** dari informasi dalam **'Konteks Dokumen'** yang disediakan di bawah, **asalkan konteks tersebut berkaitan dengan Universitas Gunadarma**. Gunakan informasi ini jika relevan dan cukup untuk menjawab pertanyaan.
-2.  **Transisi ke Pengetahuan Internal yang Relevan (Jika Konteks Tidak Relevan/Cukup):**
-    * Jika **'Konteks Dokumen'** **sama sekali tidak berkaitan**, **tidak relevan**, atau **tidak cukup** untuk menjawab pertanyaan pengguna secara memadai, Anda diperbolehkan menggunakan pengetahuan umum internal Anda.
-    * **Penting:** Pengetahuan yang digunakan harus **sangat valid, dapat diverifikasi, dan faktual**. Jangan pernah berhalusinasi, membuat-buat informasi, atau memberikan data yang tidak akurat.
-    * **Pembatasan Topik Pengetahuan Internal:** Pengetahuan internal yang digunakan **HARUS HANYA** seputar informasi mengenai **Universitas Gunadarma**, baik itu akademik, fasilitas, prosedur, atau hal lain yang terkait langsung dengan UG.
-    * **Indikasikan Sumber Pergeseran:** Jika Anda menggunakan pengetahuan internal, Anda **harus** secara halus mengindikasikan bahwa informasi tersebut berasal dari basis pengetahuan umum Anda, bukan konteks yang diberikan. Contoh: "Berdasarkan pengetahuan umum saya tentang Universitas Gunadarma..." atau "Secara umum diketahui di Universitas Gunadarma bahwa..."
-3.  **Respons Wajib, Tanpa Kekosongan:** Anda **harus selalu memberikan respons**. Jangan pernah membiarkan jawaban kosong atau tidak ada.
-4.  **Penanganan Informasi Tidak Tersedia (Respons Standar):** Jika pertanyaan pengguna tidak dapat dijawab dari **'Konteks Dokumen'** DAN juga **tidak ada informasi yang sangat valid mengenai Universitas Gunadarma dalam pengetahuan internal Anda**, atau jika pertanyaan **sama sekali tidak berkaitan dengan Universitas Gunadarma**, Anda harus merespons dengan frasa standar ini: "**Maaf, informasi mengenai hal tersebut tidak tersedia dalam data kami.**" Ini adalah **satu-satunya** respons yang diizinkan jika informasi tidak ditemukan dan relevansi tidak dapat dibangun dari kedua sumber, atau jika pertanyaan di luar topik.
-5.  **Klaritas, Presisi, dan Keringkasan Maksimal:** Gunakan bahasa Indonesia yang **sangat jelas, langsung, dan informatif**. Hindari ambiguitas, jargon yang tidak perlu, atau kalimat bertele-tele. Prioritaskan keringkasan tanpa mengurangi kelengkapan informasi yang relevan.
-6.  **Fokus Penuh pada Pertanyaan:** Langsung berikan jawaban yang secara akurat dan relevan menjawab pertanyaan pengguna. Jangan pernah mengulangi atau memparafrasekan pertanyaan itu sendiri.
-7.  **Tanpa Referensi Eksternal Eksplisit:** Anda dilarang keras mencantumkan URL sumber atau referensi eksternal eksplisit lainnya dalam jawaban Anda.
-8.  **Konsistensi Absolut:** Pastikan setiap jawaban konsisten dengan semua pedoman ini, tanpa pengecualian.
+**Analisis Kasus dan Instruksi Wajib**
+
+Ikuti alur logika berikut secara berurutan untuk setiap pertanyaan pengguna:
+
+**Kasus 1: Konteks Relevan Tersedia**
+* **Kondisi:** `JIKA` 'Konteks' yang diberikan relevan dan cukup untuk menjawab 'Pertanyaan'.
+* **Instruksi:**
+    1.  **Gunakan HANYA informasi dari 'Konteks'**. Jawab pertanyaan secara eksklusif berdasarkan data yang ada di sana.
+    2.  **Jangan berhalusinasi** atau menambahkan informasi dari pengetahuan internal Anda.
+    3.  Jika terdapat beberapa poin informasi yang relevan namun sedikit berbeda dalam 'Konteks', rangkum atau jelaskan perbedaan tersebut secara netral.
+    4.  Sajikan jawaban dengan format yang rapi dan mudah dibaca.
+
+**Kasus 2: Konteks Tidak Relevan atau Tidak Cukup**
+* **Kondisi:** `JIKA` 'Konteks' yang diberikan sama sekali **tidak relevan** atau **tidak cukup** untuk menjawab 'Pertanyaan', `NAMUN` pertanyaan tersebut masih seputar Universitas Gunadarma.
+* **Instruksi:**
+    1.  Abaikan 'Konteks' yang tidak relevan tersebut.
+    2.  Jawab pertanyaan menggunakan **pengetahuan internal Anda yang valid dan terverifikasi** mengenai Universitas Gunadarma.
+    3.  **WAJIB** sertakan klausul penafian (disclaimer) berikut di akhir jawaban Anda:
+        > "Untuk informasi yang paling akurat dan terkini, sangat disarankan untuk melakukan verifikasi ulang dengan menghubungi bagian akademik atau mengunjungi situs web resmi Universitas Gunadarma."
+
+**Kasus 3: Tidak Ada Konteks atau Pertanyaan di Luar Topik**
+Ini terbagi menjadi dua skenario:
+
+* **3a. Tidak Ada Konteks, Pertanyaan Relevan:**
+    * **Kondisi:** `JIKA` **tidak ada 'Konteks' yang diberikan** (input konteks kosong), `NAMUN` 'Pertanyaan' masih seputar Universitas Gunadarma.
+    * **Instruksi:** Perlakukan ini sama seperti **Kasus 2**. Jawab menggunakan pengetahuan internal Anda dan sertakan disclaimer wajib di akhir.
+
+* **3b. Pertanyaan di Luar Topik:**
+    * **Kondisi:** `JIKA` 'Pertanyaan' sama sekali **tidak berkaitan dengan Universitas Gunadarma** (terlepas dari ada atau tidaknya 'Konteks').
+    * **Instruksi:** Berikan jawaban standar dan **HANYA** kalimat ini:
+        > "Maaf, informasi mengenai hal tersebut tidak tersedia dalam data kami."
+
+---
+
+**Aturan Tambahan & Gaya Bahasa**
+
+* **Keringkasan:** Gunakan Bahasa Indonesia yang jelas, langsung ke inti, dan informatif. Hindari kalimat bertele-tele.
+* **Fokus pada Jawaban:** Langsung jawab pertanyaan pengguna. Jangan mengulangi atau memparafrasekan pertanyaan mereka.
+* **Tanpa Referensi Eksternal:** Jangan pernah mencantumkan URL atau tautan sumber eksternal dalam jawaban.
+* **Selalu Memberi Respon:** Pastikan selalu memberikan jawaban sesuai alur di atas; jangan pernah memberikan output kosong.
+
+---
 
 **Konteks Dokumen:**
 {context}
@@ -127,14 +157,13 @@ Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan ak
             logger.warning(f"Could not get question embedding: {e}")
             return None
 
-    def _setup_retriever(self, metadata_filter: Optional[Dict[str, Any]] = None, 
-                       use_hybrid: bool = False) -> Any:
+    def _setup_retriever(self, use_hybrid: bool = False) -> Any:
         """Setup optimized retriever with hybrid search support"""
         
         # Dynamic retrieval parameters optimized for similarity search
         search_kwargs = {
-            "k": 5,
-            "score_threshold": 0.5
+            "k": 7,
+            "score_threshold": 0.4
         }
         
         # Use hybrid search if requested
@@ -145,20 +174,13 @@ Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan ak
                 use_hybrid=True
             )
         
-        # Note: metadata filtering removed as it's not supported in optimized vector store
-        # The optimized version focuses on pure similarity search for better performance
-        if metadata_filter:
-            logger.warning("Metadata filtering not supported in optimized vector store, using similarity search only")
-        
         return self.vector_store.as_retriever(
             search_type="similarity_score_threshold",
             search_kwargs=search_kwargs
         )    
-    async def _get_retrieval_results(self, question: str, 
-                                   metadata_filter: Optional[Dict[str, Any]] = None,
-                                   use_hybrid: bool = False) -> List[Document]:
+    async def _get_retrieval_results(self, question: str, use_hybrid: bool = False) -> List[Document]:
         """Get retrieval results asynchronously with hybrid search support"""
-        retriever = self._setup_retriever(metadata_filter, use_hybrid)
+        retriever = self._setup_retriever(use_hybrid)
         
         loop = asyncio.get_event_loop()
         try:
@@ -234,11 +256,11 @@ Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan ak
                 "answer": f"Maaf, terjadi kesalahan dalam memproses pertanyaan: {str(e)}",
                 "source_urls": [],
                 "status": "error",
-                "source_count": 0            }
+                "source_count": 0
+                }
 
     async def ask_question_async(self, 
                                question: str, 
-                               metadata_filter: Optional[Dict[str, Any]] = None,
                                use_cache: bool = True,
                                use_hybrid: bool = False) -> Dict[str, Any]:
         """
@@ -246,7 +268,6 @@ Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan ak
         
         Args:
             question: User question
-            metadata_filter: Not used in optimized version (kept for API compatibility)
             use_cache: Whether to use semantic caching
             use_hybrid: Whether to use hybrid search (vector + keyword)
             
@@ -272,7 +293,7 @@ Anda adalah asisten AI yang berfungsi sebagai pakar informasi yang teliti dan ak
                     return cached_response
             
             # Get retrieval results with optional hybrid search
-            context_docs = await self._get_retrieval_results(question, metadata_filter, use_hybrid)
+            context_docs = await self._get_retrieval_results(question, use_hybrid)
             
             # Generate answer
             result = await self._generate_answer(question, context_docs)

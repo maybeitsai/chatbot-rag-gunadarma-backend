@@ -13,16 +13,9 @@ router = APIRouter()
 async def root(app_state: AppState = Depends(get_app_state)):
     """Root endpoint with startup status"""
     return {
-        "message": "Gunadarma RAG API - Optimized",
+        "message": "Chatbot Gunadarma API",
         "status": "running" if app_state.is_startup_complete() else "starting",
-        "version": "2.0.0",
-        "features": [
-            "Semantic Caching",
-            "Optimized Vector Store with HNSW",
-            "Asynchronous Processing",
-            "Metadata Filtering",
-            "Performance Monitoring"
-        ]
+        "version": "1.0.0",
     }
 
 

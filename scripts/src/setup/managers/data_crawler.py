@@ -89,7 +89,7 @@ class DataCrawler:
         """Get optimized crawl configuration"""
         return CrawlConfig(
             max_depth=3,
-            similarity_threshold=0.8,
+            similarity_threshold=0.9,
             duplicate_threshold=0.95,
             request_delay=1.0,
             baak_delay=2.0,

@@ -49,21 +49,3 @@ class BatchValidator:
             validated_questions.append(question.strip())
         return validated_questions
 
-
-class MetadataValidator:
-    """Validator untuk metadata filters"""
-    
-    @staticmethod
-    def validate_metadata_filter(metadata_filter: dict) -> dict:
-        """Validate metadata filter structure"""
-        if not isinstance(metadata_filter, dict):
-            raise ValueError("Metadata filter must be a dictionary")
-        
-        # Add specific validation rules based on your metadata structure
-        allowed_keys = ["source", "category", "type", "date_range"]
-        
-        for key in metadata_filter.keys():
-            if key not in allowed_keys:
-                raise ValueError(f"Invalid metadata key: {key}. Allowed keys: {allowed_keys}")
-        
-        return metadata_filter

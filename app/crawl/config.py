@@ -16,7 +16,7 @@ class CrawlConfig:
     request_delay: float = 1.0
     baak_delay: float = 2.0
     pdf_delay: float = 2.0
-    similarity_threshold: float = 0.8
+    similarity_threshold: float = 0.9
     duplicate_threshold: float = 0.95
     max_retries: int = 3
     timeout: int = 60
@@ -28,8 +28,7 @@ class CrawlConfig:
     enable_response_cache: bool = True
     enable_smart_filtering: bool = True
     enable_robots_respect: bool = True
-    cache_ttl: int = 60 * 60 * 24 * 30  # 30 days
-    max_cache_size: int = 1000
+    cache_ttl: int = 60 * 60 * 24
     
     # Robots.txt bypass for specific domains
     robots_bypass_domains: List[str] = field(default_factory=lambda: [

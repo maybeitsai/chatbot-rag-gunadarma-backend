@@ -27,7 +27,7 @@ class SearchType(Enum):
     VECTOR_ONLY = "vector_only"
     KEYWORD_ONLY = "keyword_only"
     HYBRID = "hybrid"
-    HYBRID_RRF = "hybrid_rrf"  # Reciprocal Rank Fusion
+    HYBRID_RRF = "hybrid_rrf"
 
 
 @dataclass
@@ -37,22 +37,22 @@ class HybridSearchConfig:
     search_type: SearchType = SearchType.HYBRID_RRF
     
     # Hybrid search weights (must sum to 1.0)
-    vector_weight: float = 0.7  # Weight for semantic similarity
-    keyword_weight: float = 0.3  # Weight for keyword matching
+    vector_weight: float = 0.64
+    keyword_weight: float = 0.36 
     
     # Result configuration
-    k: int = 5  # Number of results to return
-    keyword_k: int = 20  # Number of keyword results for hybrid
-    vector_k: int = 20  # Number of vector results for hybrid
+    k: int = 5
+    keyword_k: int = 16
+    vector_k: int = 16
     
     # Scoring thresholds
-    vector_score_threshold: float = 0.4
-    keyword_score_threshold: float = 0.2
-    hybrid_score_threshold: float = 0.3
+    vector_score_threshold: float = 0.32
+    keyword_score_threshold: float = 0.16
+    hybrid_score_threshold: float = 0.24
     
     # RRF parameters
-    rrf_k: int = 60  # RRF constant (typically 60)
-    
+    rrf_k: int = 60
+
     # TF-IDF parameters
     tfidf_max_features: int = 10000
     tfidf_ngram_range: Tuple[int, int] = (1, 2)
@@ -256,7 +256,7 @@ class HybridSearchManager:
             
             # Process vector results
             for rank, (doc, score) in enumerate(vector_results):
-                doc_id = str(doc.page_content)  # Use content as ID
+                doc_id = str(doc.page_content)
                 rrf_score = 1.0 / (self.config.rrf_k + rank + 1)
                 doc_scores[doc_id] = {
                     'document': doc,

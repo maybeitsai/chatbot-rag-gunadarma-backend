@@ -40,9 +40,9 @@ class SemanticCache:
     
     def __init__(self, 
                  cache_file: str = "cache/semantic_cache.json",
-                 similarity_threshold: float = 0.85,
+                 similarity_threshold: float = 0.9,
                  max_cache_size: int = 1000,
-                 ttl_hours: int = 24 * 7):  # 1 week default TTL
+                 ttl_hours: int = 24):
         
         self.cache_file = Path(cache_file)
         self.cache_file.parent.mkdir(exist_ok=True)
@@ -368,7 +368,7 @@ if __name__ == "__main__":
             "Apa itu Universitas Gunadarma?",
             "Apa saja fakultas di Universitas Gunadarma?",
             "Bagaimana cara mendaftar kuliah di Gunadarma?",
-            "Fakultas apa saja yang tersedia di UG?",  # Similar to question 2
+            "Fakultas apa saja yang tersedia di UG?",
         ]
         
         # Simulate responses

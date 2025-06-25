@@ -10,11 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def generate_cache_key(question: str, metadata_filter: Optional[Dict[str, Any]] = None) -> str:
-    """Generate cache key dari question dan metadata filter"""
+def generate_cache_key(question: str) -> str:
+    """Generate cache key dari question"""
     cache_data = {
         "question": question.strip().lower(),
-        "metadata_filter": metadata_filter or {}
     }
     
     # Convert to string and hash

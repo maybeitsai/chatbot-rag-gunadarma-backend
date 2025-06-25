@@ -28,7 +28,6 @@ async def ask_question(
     return await RAGService.process_question(
         rag_pipeline=rag_pipeline,
         question=request.question,
-        metadata_filter=request.metadata_filter,
         use_cache=request.use_cache,
         use_hybrid=request.use_hybrid
     )
