@@ -362,6 +362,7 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "ruff" },
+    { name = "sastrawi" },
     { name = "scikit-learn" },
     { name = "sqlalchemy" },
     { name = "tiktoken" },
@@ -410,6 +411,7 @@ requires-dist = [
     { name = "requests", specifier = ">=2.32.3" },
     { name = "rich", specifier = ">=14.0.0" },
     { name = "ruff", specifier = ">=0.11.12" },
+    { name = "sastrawi", specifier = ">=1.0.1" },
     { name = "scikit-learn", specifier = ">=1.7.0" },
     { name = "sqlalchemy", specifier = ">=2.0.41" },
     { name = "tiktoken", specifier = ">=0.9.0" },
@@ -2532,6 +2534,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/6a/ef/b960ab4818f90ff59e571d03c3f992828d4683561095e80f9ef31f3d58b7/ruff-0.12.0-py3-none-win32.whl", hash = "sha256:7162a4c816f8d1555eb195c46ae0bd819834d2a3f18f98cc63819a7b46f474fb", size = 10525289, upload-time = "2025-06-17T15:19:19.688Z" },
     { url = "https://files.pythonhosted.org/packages/34/93/8b16034d493ef958a500f17cda3496c63a537ce9d5a6479feec9558f1695/ruff-0.12.0-py3-none-win_amd64.whl", hash = "sha256:d00b7a157b8fb6d3827b49d3324da34a1e3f93492c1f97b08e222ad7e9b291e0", size = 11598311, upload-time = "2025-06-17T15:19:21.785Z" },
     { url = "https://files.pythonhosted.org/packages/d0/33/4d3e79e4a84533d6cd526bfb42c020a23256ae5e4265d858bd1287831f7d/ruff-0.12.0-py3-none-win_arm64.whl", hash = "sha256:8cd24580405ad8c1cc64d61725bca091d6b6da7eb3d36f72cc605467069d7e8b", size = 10724946, upload-time = "2025-06-17T15:19:23.952Z" },
+]
+
+[[package]]
+name = "sastrawi"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/e8/abff41a085ec33b1a55f2065e0ebe1d6c9b6635559a94b3774c8c81e88aa/Sastrawi-1.0.1.zip", hash = "sha256:62badb523e6e273f92eb6d53f5f3d4c0aa9ffcf1ceba69ab3dba5b7a0da02c56", size = 211653, upload-time = "2016-01-18T12:13:07.026Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/4b/bab676953da3103003730b8fcdfadbdd20f333d4add10af949dd5c51e6ed/Sastrawi-1.0.1-py2.py3-none-any.whl", hash = "sha256:ac3d1f442ae8f33fd0f59387eb33a1a5121241f028c318c60820f26bd032d93b", size = 209671, upload-time = "2016-01-18T12:12:43.267Z" },
 ]
 
 [[package]]
