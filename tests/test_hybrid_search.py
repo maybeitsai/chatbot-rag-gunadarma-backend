@@ -37,9 +37,10 @@ class TestHybridSearchConfig:
         assert config.search_type == SearchType.HYBRID_RRF
         assert config.vector_weight == 0.7
         assert config.keyword_weight == 0.3
-        assert config.k == 5  # Fixed: actual default is 5, not 8
-        assert config.vector_score_threshold == 0.4  # Fixed: actual default is 0.4
-        assert config.keyword_score_threshold == 0.2  # Fixed: actual default is 0.2
+        assert config.k == 5
+        assert config.vector_score_threshold == 0.20
+        assert config.keyword_score_threshold == 0.12
+        assert config.hybrid_score_threshold == 0.16
         assert config.rrf_k == 60
         assert config.tfidf_max_features == 10000
         assert config.tfidf_ngram_range == (1, 2)
@@ -174,12 +175,25 @@ class TestHybridSearchManager:
         """Test loading document texts from database"""
         # Mock database connection and cursor
         mock_cursor = Mock()
+        
+        # Create row objects that support dictionary-style access like RealDictCursor
+        class MockRow:
+            def __init__(self, document, cmetadata):
+                self._data = {'document': document, 'cmetadata': cmetadata}
+            
+            def __getitem__(self, key):
+                return self._data[key]
+        
+        # Mock fetchone for collection check (returns dict-like object)
+        mock_cursor.fetchone.return_value = {'name': 'test_collection', 'uuid': 'test-uuid'}
+        
+        # Mock fetchall for documents (returns list of dict-like objects)
         mock_cursor.fetchall.return_value = [
-            {'document': text, 'cmetadata': {'url': f'http://example.com/{i}'}}
+            MockRow(text, {'url': f'http://example.com/{i}'}) 
             for i, text in enumerate(sample_documents)
         ]
         
-        # Properly mock the context manager
+        # Properly mock the context manager for cursor with RealDictCursor
         mock_conn = Mock()
         mock_conn.__enter__ = Mock(return_value=mock_conn)
         mock_conn.__exit__ = Mock(return_value=None)

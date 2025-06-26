@@ -315,7 +315,7 @@ class RAGSystemTester:
         
         try:
             payload = {
-                "questions": self.test_questions[:3],  # Test with first 3 questions
+                "questions": self.test_questions[:3],
                 "use_cache": True
             }
             

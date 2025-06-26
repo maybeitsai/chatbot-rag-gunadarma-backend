@@ -34,25 +34,25 @@ class TestCrawlConfig:
         config = CrawlConfig()
         
         assert config.max_depth == 3
-        assert config.similarity_threshold == 0.8
-        assert config.duplicate_threshold == 0.95
+        assert config.similarity_threshold == 0.92
+        assert config.duplicate_threshold == 0.96
         assert config.enable_url_cache is True
         assert config.enable_content_cache is True
         assert config.enable_smart_filtering is True
-        assert config.cache_ttl == 60 * 60 * 24  * 30
+        assert config.cache_ttl == 60 * 60 * 24
         assert config.max_cache_size == 1000
     
     def test_custom_config(self):
         """Test custom configuration"""
         config = CrawlConfig(
             max_depth=2,
-            similarity_threshold=0.9,
+            similarity_threshold=0.92,
             enable_url_cache=False,
             cache_ttl=7200
         )
         
         assert config.max_depth == 2
-        assert config.similarity_threshold == 0.9
+        assert config.similarity_threshold == 0.92
         assert config.enable_url_cache is False
         assert config.cache_ttl == 7200
 

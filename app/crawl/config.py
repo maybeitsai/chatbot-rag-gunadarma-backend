@@ -29,6 +29,7 @@ class CrawlConfig:
     enable_smart_filtering: bool = True
     enable_robots_respect: bool = True
     cache_ttl: int = 60 * 60 * 24
+    max_cache_size: int = 1000
     
     # Robots.txt bypass for specific domains
     robots_bypass_domains: List[str] = field(default_factory=lambda: [
