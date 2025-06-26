@@ -89,8 +89,8 @@ class DataCrawler:
         """Get optimized crawl configuration"""
         return CrawlConfig(
             max_depth=3,
-            similarity_threshold=0.9,
-            duplicate_threshold=0.95,
+            similarity_threshold=0.92,
+            duplicate_threshold=0.96,
             request_delay=1.0,
             baak_delay=2.0,
             enable_url_cache=True,

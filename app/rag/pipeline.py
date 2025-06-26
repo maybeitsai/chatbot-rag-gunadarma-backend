@@ -51,7 +51,7 @@ class RAGPipeline:
             model=self.llm_model,
             google_api_key=self.google_api_key,
             temperature=0.32,
-            max_output_tokens=1024
+            max_output_tokens=2048
         )
         
         # Initialize embeddings for caching

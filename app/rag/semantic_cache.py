@@ -40,7 +40,7 @@ class SemanticCache:
     
     def __init__(self, 
                  cache_file: str = "cache/semantic_cache.json",
-                 similarity_threshold: float = 0.9,
+                 similarity_threshold: float = 0.92,
                  max_cache_size: int = 1000,
                  ttl_hours: int = 24):
         
@@ -361,7 +361,7 @@ def get_semantic_cache() -> SemanticCache:
 if __name__ == "__main__":
     # Test the semantic cache
     async def test_cache():
-        cache = SemanticCache(similarity_threshold=0.8)
+        cache = SemanticCache(similarity_threshold=0.92)
         
         # Test questions
         questions = [

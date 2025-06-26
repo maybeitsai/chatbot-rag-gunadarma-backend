@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class DataCleaner:
     """Enhanced data cleaning utilities with optimized performance"""
     
-    def __init__(self, similarity_threshold: float = 0.95):
+    def __init__(self, similarity_threshold: float = 0.96):
         self.similarity_threshold = similarity_threshold
         self.seen_content_hashes: Set[str] = set()
         self.url_content_map: Dict[str, str] = {}
@@ -289,7 +289,7 @@ class DataCleaner:
         }
 
 
-def clean_data_file(input_file: str, output_file: str, similarity_threshold: float = 0.95) -> Dict[str, int]:
+def clean_data_file(input_file: str, output_file: str, similarity_threshold: float = 0.96) -> Dict[str, int]:
     """
     Clean and deduplicate data file with optimized performance
     
