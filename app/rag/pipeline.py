@@ -50,7 +50,7 @@ class RAGPipeline:
         self.llm = ChatGoogleGenerativeAI(
             model=self.llm_model,
             google_api_key=self.google_api_key,
-            temperature=0.32,
+            temperature=0.24,
             max_output_tokens=2048
         )
         
@@ -162,8 +162,8 @@ Ini terbagi menjadi dua skenario:
         
         # Dynamic retrieval parameters optimized for similarity search
         search_kwargs = {
-            "k": 7,
-            "score_threshold": 0.4
+            "k": 8,
+            "score_threshold": 0.16
         }
         
         # Use hybrid search if requested
