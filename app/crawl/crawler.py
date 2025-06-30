@@ -46,7 +46,9 @@ class WebCrawler:
         # Statistics
         self.stats = {
             'pages_crawled': 0,
-            'pages_updated': 0,            'pages_skipped': 0,            'pdfs_processed': 0,
+            'pages_updated': 0,
+            'pages_skipped': 0, 
+            'pdfs_processed': 0,
             'errors': 0,
             'cache_hits': 0,
             'duplicates_skipped': 0
