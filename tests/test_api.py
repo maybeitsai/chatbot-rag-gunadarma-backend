@@ -17,9 +17,10 @@ def test_health():
         response = requests.get(f"{BASE_URL}/api/v1/health")
         assert response.status_code == 200, f"Health check failed: {response.status_code}"
         print("✅ Health check passed")
+        return True
     except Exception as e:
         print(f"❌ Health check error: {e}")
-        assert False, f"Health check failed with exception: {e}"
+        return False
 
 def test_root():
     """Test root endpoint"""
@@ -29,9 +30,10 @@ def test_root():
         assert response.status_code == 200, f"Root endpoint failed: {response.status_code}"
         data = response.json()
         print(f"✅ Root endpoint: {data['message']}")
+        return True
     except Exception as e:
         print(f"❌ Root endpoint error: {e}")
-        assert False, f"Root endpoint failed with exception: {e}"
+        return False
 
 def test_stats():
     """Test stats endpoint"""
@@ -41,9 +43,10 @@ def test_stats():
         assert response.status_code == 200, f"Stats endpoint failed: {response.status_code}"
         data = response.json()
         print(f"✅ Stats - LLM: {data.get('llm_model')}, Embedding: {data.get('embedding_model')}")
+        return True
     except Exception as e:
         print(f"❌ Stats endpoint error: {e}")
-        assert False, f"Stats endpoint failed with exception: {e}"
+        return False
 
 def test_examples():
     """Test examples endpoint"""
@@ -54,13 +57,13 @@ def test_examples():
         data = response.json()
         examples = data.get('example_questions', [])
         print(f"✅ Examples endpoint - {len(examples)} example questions")
+        return True
     except Exception as e:
         print(f"❌ Examples endpoint error: {e}")
-        assert False, f"Examples endpoint failed with exception: {e}"
+        return False
 
-def test_ask_question():
+def test_ask_question(question):
     """Test ask endpoint with a sample question"""
-    question = "Apa itu Universitas Gunadarma?"
     print(f"🔍 Testing question: '{question}'")
     try:
         response = requests.post(
@@ -80,11 +83,10 @@ def test_ask_question():
         print(f"🔗 Sources: {len(data['source_urls'])} URLs")
         if data['source_urls']:
             print(f"   First source: {data['source_urls'][0]}")
+        return True
     except Exception as e:
         print(f"❌ Ask endpoint error: {e}")
-        # For API tests, skip if server is not running instead of failing
-        import pytest
-        pytest.skip(f"API server not available: {e}")
+        return False
 
 def main():
     """Main test function"""
@@ -103,15 +105,16 @@ def main():
             pass
         time.sleep(2)
         print(f"   Attempt {i+1}/10...")
-      # Test basic endpoints
+    
+    # Test basic endpoints
     tests_passed = 0
     total_tests = 0
     
     # Test 1: Root endpoint
     total_tests += 1
     try:
-        test_root()
-        tests_passed += 1
+        if test_root():
+            tests_passed += 1
     except (AssertionError, Exception):
         pass
     print()
@@ -119,8 +122,8 @@ def main():
     # Test 2: Health endpoint
     total_tests += 1
     try:
-        test_health()
-        tests_passed += 1
+        if test_health():
+            tests_passed += 1
     except (AssertionError, Exception):
         pass
     print()

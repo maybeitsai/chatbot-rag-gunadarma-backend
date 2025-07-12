@@ -16,8 +16,8 @@ class CrawlConfig:
     request_delay: float = 1.0
     baak_delay: float = 2.0
     pdf_delay: float = 2.0
-    similarity_threshold: float = 0.92
-    duplicate_threshold: float = 0.96
+    similarity_threshold: float = 0.98
+    duplicate_threshold: float = 0.99
     max_retries: int = 3
     timeout: int = 60
     max_concurrent: int = 5
