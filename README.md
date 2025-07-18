@@ -1,336 +1,168 @@
-# 🤖 Chatbot RAG Gunadarma Backend
+# Chatbot RAG Gunadarma - Backend
 
-[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.12+-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](docker-compose.yml)
+## Abstract/Introduction
 
-A high-performance Retrieval-Augmented Generation (RAG) backend API specifically designed for Gunadarma University information system. Features semantic caching, hybrid search, and async processing for fast and accurate responses.
+This project is the backend system for a sophisticated chatbot developed for a scientific research project (*Penelitian Ilmiah*) at Gunadarma University. Its primary purpose is to provide users with accurate, context-aware answers by leveraging a Retrieval-Augmented Generation (RAG) architecture. The system is designed to overcome the limitations of traditional chatbots by grounding its responses in a specific, curated knowledge base obtained from designated web sources. It fetches, processes, and indexes information, allowing the Large Language Model (LLM) to generate responses that are not only fluent but also factually consistent with the source material.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [API Usage](#-api-usage)
-- [Development](#-development)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
+- [Core Features](#core-features)
+- [System Architecture](#system-architecture)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Setup and Installation](#setup-and-installation)
+- [API Usage and Endpoints](#api-usage-and-endpoints)
+- [Running Tests](#running-tests)
+- [License](#license)
 
-## ✨ Features
+## Core Features
 
-- **🔍 Hybrid Search**: Combines semantic and keyword search for better accuracy
-- **⚡ Semantic Caching**: Automatic caching for similar queries using embedding similarity
-- **📊 Vector Database**: PostgreSQL with vector extensions for efficient similarity search
-- **🌐 FastAPI Backend**: High-performance REST API with auto-generated documentation
-- **💬 WebSocket Support**: Real-time chat functionality
-- **🕷️ Smart Crawler**: Intelligent web crawling with content extraction
-- **🐳 Docker Ready**: Complete containerization for easy deployment
+-   **Automated Web Crawling:** Systematically gathers and updates the knowledge base from specified websites.
+-   **RAG Pipeline:** Implements a full data processing pipeline, including cleaning, chunking, embedding, and indexing for efficient retrieval.
+-   **Hybrid Search:** Utilizes a combination of semantic (vector) search and traditional keyword-based search to ensure highly relevant document retrieval.
+-   **Semantic Caching:** Caches responses to frequently asked questions to deliver near-instantaneous answers and reduce computational load.
+-   **RESTful API:** Exposes all chatbot functionalities through a clean, well-documented API built with FastAPI.
+-   **WebSocket Support:** Enables real-time, bidirectional communication for a more interactive user experience.
+-   **Containerization:** Includes a `Dockerfile` for easy and consistent deployment in any environment.
 
-## 🚀 Quick Start
+## System Architecture
 
-### Prerequisites
+The backend is built upon a modular architecture that separates concerns into distinct components: data crawling, the RAG pipeline, and the client-facing API. This design ensures scalability and maintainability.
 
-- Python 3.12+
-- PostgreSQL 15+
-- Docker & Docker Compose (recommended)
+The data flow is as follows:
 
-### 1. Clone & Setup
+1.  **Crawling:** The `crawler` module is initiated to fetch raw data (HTML, PDFs, etc.) from predefined web sources.
+2.  **Data Processing:** The raw data is passed to the `rag/data_processor`, which cleans it, extracts relevant text, and splits it into manageable chunks.
+3.  **Indexing:** The `rag/vector_store` component takes the processed chunks, generates numerical representations (embeddings) using a sentence-transformer model, and stores them in a vector database for efficient similarity search.
+4.  **User Query:** A user submits a question through the REST API.
+5.  **Hybrid Search:** The `rag/hybrid_search` module receives the query. It performs a vector search to find semantically similar chunks and a keyword search for exact matches, then intelligently combines the results.
+6.  **Prompt Augmentation:** The most relevant document chunks retrieved from the search are combined with the original user query to form a detailed, context-rich prompt.
+7.  **LLM Generation:** This augmented prompt is sent to a Large Language Model (e.g., Google's Gemini), which generates a coherent and contextually accurate answer.
+8.  **Response:** The final answer is sent back to the user via the API.
 
+```mermaid
+flowchart TD
+    A[External Websites] -->|HTTP/S| B(Crawler);
+    B -->|Raw Content| C(Data Processor);
+    C -->|Cleaned Chunks| D(Vector Store);
+    D -->|Embeddings| E[Vector Database];
+
+    subgraph "User Interaction"
+        F[User] -->|POST /api/v1/question| G{API Server};
+    end
+
+    subgraph "RAG Pipeline"
+        G -->|Query| H(Hybrid Search);
+        H -->|Search Query| E;
+        E -->|Relevant Documents| H;
+        H -->|Ranked Documents| I(Prompt Augmenter);
+        G -->|Original Query| I;
+        I -->|Augmented Prompt| J(LLM - Google Gemini);
+        J -->|Generated Answer| G;
+    end
+
+    G -->|JSON Response| F;
+```
+
+## Technology Stack
+
+This project utilizes a modern Python stack for building high-performance AI applications.
+
+-   **Backend Framework:** FastAPI
+-   **Web Server:** Uvicorn
+-   **Data Validation:** Pydantic
+-   **LLM Orchestration:** LangChain
+-   **LLM Provider:** Google Generative AI (Gemini)
+-   **Vector Embeddings & Search:** Scikit-learn, LangChain Community
+-   **Web Crawling:** BeautifulSoup4, Playwright
+-   **Async Operations:** aiohttp, asyncio
+-   **Database/Storage:** SQLAlchemy, Langchain-Postgres
+-   **Real-time Communication:** python-socketio
+-   **Dependency Management:** uv
+-   **Testing:** Pytest, pytest-asyncio
+-   **Linting/Formatting:** Ruff, Black
+
+## Project Structure
+
+The project is organized into logical modules to promote separation of concerns.
+
+```
+/
+├── app/
+│   ├── api/          # Handles all API logic: endpoints, schemas, services.
+│   ├── crawl/        # Contains the web crawling and content extraction logic.
+│   └── rag/          # Core RAG pipeline: data processing, vector store, hybrid search.
+├── scripts/          # Utility scripts for setup, orchestration, and CLI commands.
+├── data/             # Stores raw and processed data outputs (e.g., JSON, CSV).
+├── cache/            # Caches for models and semantic query responses.
+├── tests/            # Automated tests for all application modules.
+├── .env.example      # Example environment variables file.
+├── main.py           # Main application entry point to start the FastAPI server.
+├── pyproject.toml    # Project metadata and dependencies for `uv`.
+└── Dockerfile        # Instructions for building the production Docker image.
+```
+
+## Setup and Installation
+
+Follow these steps to set up and run the project locally.
+
+**1. Prerequisites**
+-   Python 3.12+
+-   [uv](https://github.com/astral-sh/uv) Python package installer (`pip install uv`)
+-   Git
+
+**2. Clone Repository**
 ```bash
-git clone https://github.com/maybeitsai/chatbot-rag-gunadarma-backend.git
+git clone https://github.com/your-username/chatbot-rag-gunadarma-backend.git
 cd chatbot-rag-gunadarma-backend
+```
 
-# Using UV (recommended)
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
-# or
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
-
+**3. Install Dependencies**
+Use `uv` to sync the virtual environment with the locked dependencies.
+```bash
 uv sync
 ```
 
-### 2. Start Services
+**4. Environment Variables**
+Copy the example environment file and fill in the required values.
+```bash
+cp .env.example .env
+```
+Now, edit the `.env` file with your specific credentials (e.g., `GOOGLE_API_KEY`, database connection strings).
+
+**5. Run the Application**
+Launch the development server using Uvicorn.
+```bash
+uvicorn main:app --reload
+```
+The API will be available at `http://127.0.0.1:8000`.
+
+## API Usage and Endpoints
+
+The following are the primary endpoints for interacting with the service.
+
+| Endpoint             | Method | Description                               | Example Payload                               |
+| -------------------- | ------ | ----------------------------------------- | --------------------------------------------- |
+| `/api/v1/question`   | `POST` | Submits a question to the RAG pipeline.   | `{"text": "What are the admission requirements?"}` |
+| `/api/v1/health`     | `GET`  | Checks the operational status of the API. | N/A                                           |
+| `/ws`                | `WS`   | Establishes a WebSocket connection.       | N/A                                           |
+
+**Example `curl` command:**
 
 ```bash
-# Start database services
-docker-compose up -d postgres redis
-
-# Run the application
-uv run python main.py
+curl -X POST "http://127.0.0.1:8000/api/v1/question" \
+-H "Content-Type: application/json" \
+-d '{"text": "Tell me about the computer science curriculum."}'
 ```
 
-### 3. Test the API
+## Running Tests
+
+To ensure the reliability and correctness of the application, run the test suite using pytest.
 
 ```bash
-curl http://localhost:8000/api/v1/health
+pytest tests
 ```
 
-Access API documentation at: http://localhost:8000/docs
+## License
 
-## 🛠️ Installation
-
-### Option 1: Using UV (Recommended)
-
-UV is a fast Python package manager. This project is configured to work with UV.
-
-```bash
-# Install UV
-curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux/Mac
-# or for Windows
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Install project dependencies
-uv sync
-
-# Activate virtual environment
-source .venv/bin/activate  # Linux/Mac
-# or
-.venv\Scripts\activate     # Windows
-```
-
-### Option 2: Using Standard Python
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
-
-# Install dependencies from pyproject.toml
-pip install -e .
-```
-
-### Database Setup
-
-```bash
-# Using Docker (recommended)
-docker-compose up -d postgres redis
-
-# Manual PostgreSQL setup (if not using Docker)
-createdb chatbot_rag
-psql -d chatbot_rag -c "CREATE EXTENSION IF NOT EXISTS vector;"
-```
-
-## ⚙️ Configuration
-
-Create a `.env` file in the root directory:
-
-```env
-# Server
-HOST=0.0.0.0
-PORT=8000
-RELOAD=true
-
-# Database
-DATABASE_URL=postgresql://chatbot_user:chatbot_password@localhost:5432/chatbot_rag
-
-# Optional Redis Cache
-REDIS_URL=redis://localhost:6379
-
-# API Keys (add your actual keys)
-GOOGLE_API_KEY=your-google-api-key
-OPENAI_API_KEY=your-openai-api-key
-
-# RAG Settings
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-CHUNK_SIZE=500
-CHUNK_OVERLAP=50
-ENABLE_CACHE=true
-
-# Logging
-LOG_LEVEL=INFO
-```
-
-## � API Usage
-
-### Start the Server
-
-```bash
-# Development server
-uv run python main.py
-
-# Or using uvicorn directly
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### Core Endpoints
-
-#### Ask Questions
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/question" \
-     -H "Content-Type: application/json" \
-     -d '{"question": "What is Gunadarma University?"}'
-```
-
-#### Health Check
-
-```bash
-curl http://localhost:8000/api/v1/health
-```
-
-#### WebSocket Chat
-
-```javascript
-const ws = new WebSocket("ws://localhost:8000/ws/chat");
-ws.send(
-  JSON.stringify({
-    question: "Tell me about computer science program",
-    session_id: "user-session-123",
-  })
-);
-```
-
-### API Documentation
-
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-## 🧪 Development
-
-### Project Structure
-
-```
-app/
-├── api/          # FastAPI application & routes
-├── rag/          # RAG pipeline & processing
-└── crawl/        # Web crawling modules
-
-scripts/          # Utility scripts
-tests/            # Test suite
-data/             # Crawled content & datasets
-cache/            # Semantic cache storage
-logs/             # Application logs
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=app --cov-report=html
-
-# Run specific test categories
-pytest -m "not slow"  # Skip slow tests
-pytest tests/test_api.py -v
-```
-
-### Code Quality
-
-```bash
-# Format code
-black .
-
-# Lint code
-ruff check .
-
-# Type checking (if using mypy)
-mypy app/
-```
-
-## 🐳 Deployment
-
-### Docker Deployment
-
-```bash
-# Build and run all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Scale the application
-docker-compose up -d --scale app=3
-```
-
-### Production Environment
-
-```bash
-# Set production variables
-export RELOAD=false
-export LOG_LEVEL=WARNING
-
-# Run with Uvicorn
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-```
-
-### Environment Variables for Production
-
-```env
-RELOAD=false
-LOG_LEVEL=WARNING
-DATABASE_URL=postgresql://user:pass@prod-db:5432/chatbot_rag
-REDIS_URL=redis://prod-redis:6379
-CORS_ORIGINS=["https://your-frontend-domain.com"]
-```
-
-## 🤝 Contributing
-
-### Development Setup
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`
-3. Install dependencies: `uv sync --dev`
-4. Make your changes and add tests
-5. Run tests: `pytest`
-6. Format code: `black . && ruff check .`
-7. Commit: `git commit -m 'Add new feature'`
-8. Push: `git push origin feature/new-feature`
-9. Create a Pull Request
-
-### Commit Convention
-
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation changes
-- `test:` Adding tests
-- `refactor:` Code refactoring
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**Database Connection Error**
-
-```bash
-# Check if PostgreSQL is running
-docker-compose ps postgres
-docker-compose logs postgres
-```
-
-**Import Errors**
-
-```bash
-# Reinstall dependencies
-uv sync --reinstall
-```
-
-**Slow Performance**
-
-- Enable Redis caching: `ENABLE_CACHE=true`
-- Reduce chunk size: `CHUNK_SIZE=300`
-- Check memory usage: `docker stats`
-
-## 📊 Performance
-
-- **Response Time**: < 2 seconds for cached queries
-- **Throughput**: > 100 requests/second
-- **Cache Hit Rate**: > 70% for common queries
-
-## � License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-
-**Made with ❤️ for Gunadarma University**
-
-[⬆ Back to top](#-chatbot-rag-gunadarma-backend)
-
-</div>
+This project is licensed under the MIT License. See the `LICENSE` file for details.
