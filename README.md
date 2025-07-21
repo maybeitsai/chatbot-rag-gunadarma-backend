@@ -45,25 +45,25 @@ Arsitektur sistem ini dirancang secara modular untuk memisahkan setiap komponen 
 ```mermaid
 graph TD
     subgraph "Data Ingestion & Processing"
-        A[Crawler] -- Fetches HTML --> B(Data Processor);
-        B -- Cleans & Chunks Text --> C[Vector Store Manager];
-        C -- Creates Embeddings --> D[(Vector DB)];
+        A[Crawler] -- "Fetches HTML" --> B(Data Processor);
+        B -- "Cleans & Chunks Text" --> C[Vector Store Manager];
+        C -- "Creates Embeddings" --> D[(Vector DB)];
     end
 
     subgraph "User Interaction & Generation"
-        E[User] -- Sends Query --> F{API Server};
-        F -- Forwards Query --> G[RAG Pipeline];
-        G -- Checks Cache --> H{(Semantic Cache)};
-        H -- Cache Miss --> I[Hybrid Search];
-        H -- Cache Hit --> J[Cached Response];
-        I -- Retrieves Documents --> D;
-        I -- Returns Relevant Docs --> G;
-        G -- Augments Prompt --> K[LLM];
-        K -- Generates Answer --> G;
-        G -- Caches & Returns Answer --> F;
-        F -- Sends Response --> E;
-        F -- Real-time --> L((WebSocket));
-        E -- Connects --> L;
+        E[User] -- "Sends Query" --> F{API Server};
+        F -- "Forwards Query" --> G[RAG Pipeline];
+        G -- "Checks Cache" --> H[(Semantic Cache)];
+        H -- "Cache Miss" --> I[Hybrid Search];
+        H -- "Cache Hit" --> J[Cached Response];
+        I -- "Retrieves Documents" --> D;
+        I -- "Returns Relevant Docs" --> G;
+        G -- "Augments Prompt" --> K[LLM];
+        K -- "Generates Answer" --> G;
+        G -- "Caches & Returns Answer" --> F;
+        F -- "Sends Response" --> E;
+        F -- "Real-time" --> L((WebSocket));
+        E -- "Connects" --> L;
     end
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
