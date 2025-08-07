@@ -207,7 +207,17 @@ curl -X POST "http://localhost:8000/api/v1/ask" \
 
 Untuk menjalankan seluruh rangkaian tes otomatis, gunakan `pytest`:
 ```bash
-pytest
+# Menjalankan semua test
+uv run python -m pytest tests\ -v
+
+# Menjalankan test tertentu
+uv run python -m pytest tests\test_api.py -v
+
+# Menjalankan test dengan coverage
+uv run python -m pytest tests\ --cov=app -v
+
+# Menjalankan test dengan filter
+uv run python -m pytest tests\ -k "not test_crawl_only_command" -v
 ```
 
 ---
