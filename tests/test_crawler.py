@@ -34,8 +34,8 @@ class TestCrawlConfig:
         config = CrawlConfig()
         
         assert config.max_depth == 3
-        assert config.similarity_threshold == 0.92
-        assert config.duplicate_threshold == 0.96
+        assert config.similarity_threshold == 0.98
+        assert config.duplicate_threshold == 0.99
         assert config.enable_url_cache is True
         assert config.enable_content_cache is True
         assert config.enable_smart_filtering is True

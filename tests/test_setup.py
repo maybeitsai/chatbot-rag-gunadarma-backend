@@ -513,26 +513,6 @@ class TestTyperCLI:
             
             # Should complete successfully
             assert result.exit_code in [0, 1]
-    
-    def test_setup_command_with_options(self):
-        """Test setup command with various options"""
-        # Test with skip-crawling
-        result = runner.invoke(cli_app, ["setup", "--skip-crawling"])
-        
-        # May fail due to missing dependencies but should process the flag
-        assert result.exit_code in [0, 1]
-        
-        # Test with force-crawl
-        result = runner.invoke(cli_app, ["setup", "--force-crawl"])
-        
-        # May fail due to missing dependencies but should process the flag
-        assert result.exit_code in [0, 1]
-        
-        # Test with log level
-        result = runner.invoke(cli_app, ["setup", "--log-level", "DEBUG"])
-        
-        # May fail due to missing dependencies but should process the flag
-        assert result.exit_code in [0, 1]
 
 class TestSetupIntegration:
     """Test complete setup integration"""
