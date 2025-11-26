@@ -38,7 +38,7 @@ class RAGPipeline:
     def __init__(self, enable_cache: bool = True,
                  hybrid_config: Optional[HybridSearchConfig] = None):
         # Configuration
-        self.llm_model = os.getenv("LLM_MODEL", "gemini-2.5-flash-preview-05-20")
+        self.llm_model = os.getenv("LLM_MODEL", "gemini-2.5-flash-lite")
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
         self.google_api_key = os.getenv("GOOGLE_API_KEY")
         
